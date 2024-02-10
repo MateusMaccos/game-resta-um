@@ -5,28 +5,30 @@ HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 65432  # The port used by the server
 
 
-def receber_msg():
+def receber_msg(s):
     while True:
         data = s.recv(1024)
         print("Servidor: " + data.decode())
 
 
-def enviar_msg():
+def enviar_msg(s):
     while True:
         console = input()
         s.sendall(console.encode())
 
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s.connect((HOST, PORT))
-    # while True:
-    #     console = input()
-    #     s.sendall(console.encode())
-    #     data = s.recv(1024)
-    #     print("Servidor: " + data.decode())
-    thread_receber = threading.Thread(target=receber_msg)
-    thread_receber.start()
-    enviar_msg()
+def cliente(ip, porta):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((ip, porta))
+        # while True:
+        #     console = input()
+        #     s.sendall(console.encode())
+        #     data = s.recv(1024)
+        #     print("Servidor: " + data.decode())
+        thread_receber = threading.Thread(target=receber_msg(s))
+        thread_receber.start()
+        enviar_msg(s)
+
 
 # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
 #     s.connect((HOST, PORT))

@@ -3,6 +3,9 @@ import pygame
 import button
 import textInput
 import socket
+import socketServer
+import socketCliente
+import threading
 
 
 def pegar_porta_livre_tcp():
@@ -100,8 +103,10 @@ def janela_jogo(selecao):
 
     def entrar_jogo():
         encerrar = False
-        text_input = textInput.TextInputBox(400, 500, 400, font)
-        group = pygame.sprite.Group(text_input)
+        ip_input = textInput.TextInputBox(400, 500, 400, font)
+        port_input = textInput.TextInputBox(900, 500, 100, font)
+        group_ip = pygame.sprite.Group(ip_input)
+        group_port = pygame.sprite.Group(port_input)
         while not encerrar:
             tela.fill(branca)
             desenhar_background(tela, background)
@@ -116,14 +121,16 @@ def janela_jogo(selecao):
             if botao_voltar.draw(tela):
                 encerrar = True
             if botao_entrar.draw(tela):
-                print(text_input.text)
+                socketCliente.cliente(ip_input.text, port_input)
 
             event_list = pygame.event.get()
             for evento in event_list:
                 if evento.type == pygame.QUIT:
                     encerrar = True
-            group.update(event_list)
-            group.draw(tela)
+            group_ip.update(event_list)
+            group_port.update(event_list)
+            group_ip.draw(tela)
+            group_port.draw(tela)
             # Atualização da tela
             pygame.display.update()
 
@@ -132,6 +139,7 @@ def janela_jogo(selecao):
         encerrar = False
         hostname = socket.gethostname()
         porta = pegar_porta_livre_tcp()
+        ip = socket.gethostbyname(hostname)
         while not conectou and not encerrar:
             tela.fill(branca)
             desenhar_background(tela, background)
@@ -145,7 +153,7 @@ def janela_jogo(selecao):
             )
             draw_text(
                 tela,
-                f"Seu IP: {socket.gethostbyname(hostname)} : {porta}",
+                f"Seu IP: {ip} : {porta}",
                 font,
                 preta,
                 300,
@@ -156,7 +164,7 @@ def janela_jogo(selecao):
 
             # Atualização da tela
             pygame.display.update()
-
+            socketServer.servidor(ip, porta)
             for evento in pygame.event.get():
                 if evento.type == pygame.QUIT:
                     conectou = True
