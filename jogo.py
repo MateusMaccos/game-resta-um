@@ -2,6 +2,15 @@
 import pygame
 import button
 import textInput
+import socket
+
+
+def pegar_porta_livre_tcp():
+    tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcp.bind(("", 0))
+    addr, port = tcp.getsockname()
+    tcp.close()
+    return port
 
 
 def draw_text(tela, text, font, text_col, x, y):
@@ -81,7 +90,9 @@ def janela_jogo(selecao):
     font = pygame.font.SysFont("arialblack", 40)
     background = pygame.image.load("images/menu.jpg")
     voltar_img = pygame.image.load("images/botao_voltar.jpg")
+    cliente_img = pygame.image.load("images/botao_cliente.jpg")
     botao_voltar = button.Button(10, 10, voltar_img, 1)
+    botao_entrar = button.Button(500, 600, cliente_img, 1)
 
     # Cores - RGB
     preta = (0, 0, 0)
@@ -104,6 +115,8 @@ def janela_jogo(selecao):
             )
             if botao_voltar.draw(tela):
                 encerrar = True
+            if botao_entrar.draw(tela):
+                print(text_input.text)
 
             event_list = pygame.event.get()
             for evento in event_list:
@@ -117,6 +130,8 @@ def janela_jogo(selecao):
     def hostear_jogo():
         conectou = False
         encerrar = False
+        hostname = socket.gethostname()
+        porta = pegar_porta_livre_tcp()
         while not conectou and not encerrar:
             tela.fill(branca)
             desenhar_background(tela, background)
@@ -127,6 +142,14 @@ def janela_jogo(selecao):
                 preta,
                 260,
                 380,
+            )
+            draw_text(
+                tela,
+                f"Seu IP: {socket.gethostbyname(hostname)} : {porta}",
+                font,
+                preta,
+                300,
+                450,
             )
             if botao_voltar.draw(tela):
                 encerrar = True
