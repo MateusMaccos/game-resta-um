@@ -1,22 +1,25 @@
 # Configurações iniciais
 import pygame
-import random
 import button
+import textInput
+
+
+def draw_text(tela, text, font, text_col, x, y):
+    img = font.render(text, True, text_col)
+    tela.blit(img, (x, y))
+
+
+def desenhar_background(tela, image):
+    size = pygame.transform.scale(image, (1200, 800))
+    tela.blit(image, (0, 0))
 
 
 def gerar_menu():
     pygame.init()
     larguraMenu, alturaMenu = 1200, 800
     telaMenu = pygame.display.set_mode((larguraMenu, alturaMenu))
+    clock = pygame.time.Clock()
     pygame.display.set_caption("Menu")
-
-    def draw_text(text, font, text_col, x, y):
-        img = font.render(text, True, text_col)
-        telaMenu.blit(img, (x, y))
-
-    def desenhar_background(image):
-        size = pygame.transform.scale(image, (1200, 800))
-        telaMenu.blit(image, (0, 0))
 
     # variaveis
     failed = False
@@ -39,14 +42,15 @@ def gerar_menu():
 
     run = True
     while run:
+        clock.tick(60)
         telaMenu.fill((0, 0, 0))
-        desenhar_background(background)
+        desenhar_background(telaMenu, background)
 
         if failed == False:
             if botao_servidor.draw(telaMenu):
-                run = False
+                failed = janela_jogo("servidor")
             if botao_cliente.draw(telaMenu):
-                run = False
+                failed = janela_jogo("cliente")
             if botao_sair.draw(telaMenu):
                 run = False
         elif failed == "sair":
@@ -59,14 +63,78 @@ def gerar_menu():
                 100,
                 380,
             )
-
-        for event in pygame.event.get():
+        event_list = pygame.event.get()
+        for event in event_list:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     failed = False
             if event.type == pygame.QUIT:
                 run = False
         pygame.display.update()
+
+
+def janela_jogo(selecao):
+    pygame.init()
+    pygame.display.set_caption("Jogo Resta Um")
+    largura, altura = 1200, 800
+    tela = pygame.display.set_mode((largura, altura))
+    font = pygame.font.SysFont("arialblack", 40)
+    background = pygame.image.load("images/menu.jpg")
+
+    # Cores - RGB
+    preta = (0, 0, 0)
+    branca = (255, 255, 255)
+
+    def entrar_jogo():
+        encerrar = False
+        text_input = textInput.TextInputBox(400, 500, 400, font)
+        group = pygame.sprite.Group(text_input)
+        while not encerrar:
+            tela.fill(branca)
+            desenhar_background(tela, background)
+            draw_text(
+                tela,
+                "Digite o endereço e porta do servidor",
+                font,
+                preta,
+                200,
+                380,
+            )
+
+            event_list = pygame.event.get()
+            for evento in event_list:
+                if evento.type == pygame.QUIT:
+                    encerrar = True
+            group.update(event_list)
+            group.draw(tela)
+            # Atualização da tela
+            pygame.display.update()
+
+    def hostear_jogo():
+        conectou = False
+        while not conectou:
+            tela.fill(branca)
+            desenhar_background(tela, background)
+            draw_text(
+                tela,
+                "Aguarde o jogador se conectar...",
+                font,
+                preta,
+                260,
+                380,
+            )
+
+            # Atualização da tela
+            pygame.display.update()
+
+            for evento in pygame.event.get():
+                if evento.type == pygame.QUIT:
+                    conectou = True
+
+    if selecao == "servidor":
+        hostear_jogo()
+    if selecao == "cliente":
+        entrar_jogo()
 
 
 gerar_menu()

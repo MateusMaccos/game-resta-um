@@ -20,6 +20,7 @@ class Button:
                 pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
                 self.cursor_changed = True  # Marca que o cursor foi alterado
             if pygame.mouse.get_pressed()[0] == 1 and not self.clicked:
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
                 self.clicked = True
                 action = True
         else:
