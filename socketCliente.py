@@ -25,7 +25,7 @@ def cliente(ip, porta):
         #     s.sendall(console.encode())
         #     data = s.recv(1024)
         #     print("Servidor: " + data.decode())
-        thread_receber = threading.Thread(target=receber_msg(s))
+        thread_receber = threading.Thread(target=receber_msg, args=(s,))
         thread_receber.start()
         enviar_msg(s)
 

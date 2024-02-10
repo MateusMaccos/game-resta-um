@@ -27,7 +27,7 @@ def servidor(ip, porta):
         conn, addr = s.accept()
         with conn:
             print(f"Conectou em {addr}")
-            thread_receber = threading.Thread(target=receber_msg(conn))
+            thread_receber = threading.Thread(target=receber_msg, args=(conn,))
             thread_receber.start()
             enviar_msg(conn)
 

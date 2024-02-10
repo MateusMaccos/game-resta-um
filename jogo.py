@@ -101,6 +101,14 @@ def janela_jogo(selecao):
     preta = (0, 0, 0)
     branca = (255, 255, 255)
 
+    def start_server(ip, porta):
+        t_server = threading.Thread(target=socketServer.servidor, args=(ip, porta))
+        t_server.start()
+
+    def start_cliente(ip, porta):
+        t_cliente = threading.Thread(target=socketCliente.cliente, args=(ip, porta))
+        t_cliente.start()
+
     def entrar_jogo():
         encerrar = False
         ip_input = textInput.TextInputBox(400, 500, 400, font)
@@ -121,7 +129,7 @@ def janela_jogo(selecao):
             if botao_voltar.draw(tela):
                 encerrar = True
             if botao_entrar.draw(tela):
-                socketCliente.cliente(ip_input.text, port_input)
+                start_cliente(ip_input.text, port_input.text)
 
             event_list = pygame.event.get()
             for evento in event_list:
@@ -133,6 +141,9 @@ def janela_jogo(selecao):
             group_port.draw(tela)
             # Atualização da tela
             pygame.display.update()
+            for evento in pygame.event.get():
+                if evento.type == pygame.QUIT:
+                    encerrar = True
 
     def hostear_jogo():
         conectou = False
@@ -140,6 +151,7 @@ def janela_jogo(selecao):
         hostname = socket.gethostname()
         porta = pegar_porta_livre_tcp()
         ip = socket.gethostbyname(hostname)
+        start_server(ip, porta)
         while not conectou and not encerrar:
             tela.fill(branca)
             desenhar_background(tela, background)
@@ -164,7 +176,6 @@ def janela_jogo(selecao):
 
             # Atualização da tela
             pygame.display.update()
-            socketServer.servidor(ip, porta)
             for evento in pygame.event.get():
                 if evento.type == pygame.QUIT:
                     conectou = True
