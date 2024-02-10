@@ -48,9 +48,9 @@ def gerar_menu():
 
         if failed == False:
             if botao_servidor.draw(telaMenu):
-                failed = janela_jogo("servidor")
+                janela_jogo("servidor")
             if botao_cliente.draw(telaMenu):
-                failed = janela_jogo("cliente")
+                janela_jogo("cliente")
             if botao_sair.draw(telaMenu):
                 run = False
         elif failed == "sair":
@@ -80,6 +80,8 @@ def janela_jogo(selecao):
     tela = pygame.display.set_mode((largura, altura))
     font = pygame.font.SysFont("arialblack", 40)
     background = pygame.image.load("images/menu.jpg")
+    voltar_img = pygame.image.load("images/botao_voltar.jpg")
+    botao_voltar = button.Button(10, 10, voltar_img, 1)
 
     # Cores - RGB
     preta = (0, 0, 0)
@@ -100,6 +102,8 @@ def janela_jogo(selecao):
                 200,
                 380,
             )
+            if botao_voltar.draw(tela):
+                encerrar = True
 
             event_list = pygame.event.get()
             for evento in event_list:
@@ -112,7 +116,8 @@ def janela_jogo(selecao):
 
     def hostear_jogo():
         conectou = False
-        while not conectou:
+        encerrar = False
+        while not conectou and not encerrar:
             tela.fill(branca)
             desenhar_background(tela, background)
             draw_text(
@@ -123,6 +128,8 @@ def janela_jogo(selecao):
                 260,
                 380,
             )
+            if botao_voltar.draw(tela):
+                encerrar = True
 
             # Atualização da tela
             pygame.display.update()
