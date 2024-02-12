@@ -18,16 +18,19 @@ def enviar_msg(s):
 
 
 def cliente(ip, porta):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((ip, porta))
-        # while True:
-        #     console = input()
-        #     s.sendall(console.encode())
-        #     data = s.recv(1024)
-        #     print("Servidor: " + data.decode())
-        thread_receber = threading.Thread(target=receber_msg, args=(s,))
-        thread_receber.start()
-        enviar_msg(s)
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((ip, int(porta)))
+            # while True:
+            #     console = input()
+            #     s.sendall(console.encode())
+            #     data = s.recv(1024)
+            #     print("Servidor: " + data.decode())
+            thread_receber = threading.Thread(target=receber_msg, args=(s,))
+            thread_receber.start()
+            enviar_msg(s)
+    except:
+        print("Não foi possivel conectar")
 
 
 # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:

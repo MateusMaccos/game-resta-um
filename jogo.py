@@ -141,9 +141,6 @@ def janela_jogo(selecao):
             group_port.draw(tela)
             # Atualização da tela
             pygame.display.update()
-            for evento in pygame.event.get():
-                if evento.type == pygame.QUIT:
-                    encerrar = True
 
     def hostear_jogo():
         conectou = False

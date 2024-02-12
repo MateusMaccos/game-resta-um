@@ -29,7 +29,7 @@ class TextInputBox(pygame.sprite.Sprite):
 
     def update(self, event_list):
         for event in event_list:
-            if event.type == pygame.MOUSEBUTTONDOWN and not self.active:
+            if event.type == pygame.MOUSEBUTTONDOWN:
                 self.active = self.rect.collidepoint(event.pos)
             if event.type == pygame.KEYDOWN and self.active:
                 if event.key == pygame.K_RETURN:
