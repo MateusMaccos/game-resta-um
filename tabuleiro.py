@@ -15,6 +15,8 @@ clock = pygame.time.Clock()
 PRETO = (0, 0, 0)
 BRANCO = (255, 255, 255)
 COR_TABULEIRO = (204, 102, 0)
+COR_TABULEIRO_ESCURECIDO = (148, 74, 0)
+VERDE = (100, 225, 0)
 
 
 class Jogo:
@@ -68,6 +70,15 @@ class Jogo:
                     pygame.draw.rect(display, BRANCO, (x, y, 75, 75))
                 else:
                     pygame.draw.rect(display, COR_TABULEIRO, (x, y, 75, 75))
+                if self.posicaoInicial != None:
+                    if [l, c] == [self.posicaoInicial[0], self.posicaoInicial[1]]:
+                        pygame.draw.rect(
+                            display, COR_TABULEIRO_ESCURECIDO, (x, y, 75, 75)
+                        )
+                    if [l, c] in self.posicoesPossiveis(
+                        self.posicaoInicial[0], self.posicaoInicial[1]
+                    ):
+                        pygame.draw.rect(display, VERDE, (x, y, 75, 75))
                 x += 75
             y += 75
 
