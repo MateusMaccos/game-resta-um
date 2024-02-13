@@ -270,6 +270,10 @@ def tela_fim_jogo(jogo, fim):
         clock.tick(60)
 
 
+def criar_chat():
+    pass
+
+
 def loop_jogo():
     jogo = Jogo()
     sair = False
@@ -285,6 +289,7 @@ def loop_jogo():
         display.fill(BRANCO)
         jogo.desenha_tabuleiro()
         jogo.desenha_menu()
+        criar_chat()
 
         fim_jogo = jogo.verifica_fim_jogo()
         if fim_jogo is not None:
