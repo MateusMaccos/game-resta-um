@@ -176,6 +176,7 @@ def janela_jogo(selecao):
             for evento in pygame.event.get():
                 if evento.type == pygame.QUIT:
                     conectou = True
+                    encerrar = True
 
     if selecao == "servidor":
         hostear_jogo()
