@@ -1,4 +1,5 @@
 import pygame
+import button
 
 # INICIANDO PROGRAMAÇÃO DO DISPLAY
 
@@ -15,12 +16,19 @@ fontFina = pygame.font.SysFont("calibri", 40)
 font_maior = pygame.font.SysFont("arialblack", 60)
 background = pygame.image.load("images/menu.jpg")
 
+
+def font_parametro(fonte, tamanho):
+    return pygame.font.SysFont(fonte, tamanho)
+
+
 # CORES
 PRETO = (0, 0, 0)
 BRANCO = (255, 255, 255)
 COR_TABULEIRO = (204, 102, 0)
 COR_TABULEIRO_ESCURECIDO = (148, 74, 0)
 VERDE = (100, 225, 0)
+CINZA = (215, 215, 215)
+CINZA_CLARO = (100, 100, 100)
 
 
 def desenhar_background(tela, image):
@@ -270,26 +278,107 @@ def tela_fim_jogo(jogo, fim):
         clock.tick(60)
 
 
-def criar_chat():
-    pass
+def criar_chat(textos, offset):
+    PADDING = 110
+    MARGIN = 50
+    pygame.draw.rect(display, CINZA, (ALTURA, 120, LARGURA - ALTURA, ALTURA - 120))
+    # chatFinal = []
+    # inicio = len(textos) - 21
+    # for i in range(inicio, len(textos)):
+    #     chatFinal.append(textos[i])
+    for texto in textos:
+        # if len(texto)>20:
+        posicao = ALTURA
+        if texto.__contains__("Você"):
+            text_surface = font_parametro("calibri", 30).render(
+                texto, True, CINZA_CLARO
+            )
+        else:
+            text_surface = font_parametro("calibri", 30).render(texto, True, PRETO)
+
+        display.blit(text_surface, (posicao, offset + PADDING + MARGIN))
+
+        MARGIN += text_surface.get_height()
+    pygame.draw.rect(display, COR_TABULEIRO, (ALTURA, 120, LARGURA - ALTURA, 40))
+    draw_text(
+        display,
+        "CHAT",
+        font,
+        BRANCO,
+        ALTURA + 140,
+        110,
+    )
+    pygame.draw.rect(display, BRANCO, (ALTURA, 0, LARGURA - ALTURA, 120))
+
+
+def botoes_chat(offset):
+    botao_subir_img = pygame.image.load("images/button_up.jpg")
+    botao_descer_img = pygame.image.load("images/button_down.jpg")
+
+    botao_subir_chat = button.Button(LARGURA - 20, 120, botao_subir_img, 1)
+    botao_descer_chat = button.Button(LARGURA - 20, 140, botao_descer_img, 1)
+    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+    if botao_subir_chat.draw(display):
+        offset += 5
+    if botao_descer_chat.draw(display):
+        offset -= 5
+    return offset
 
 
 def loop_jogo():
     jogo = Jogo()
     sair = False
-    print(pygame.font.get_fonts())
+    offset = 0
+    textos = [
+        "Oponente: ola",
+        "Você: tudo bem?",
+        "Oponente: blz?",
+        "Oponente: blz?",
+        "Oponente: blz?",
+        "Oponente: blz?",
+        "Oponente: blz?",
+        "Oponente: blz?",
+        "Oponente: blz?",
+        "Oponente: blz?",
+        "Oponente: blz?",
+        "Oponente: blz?",
+        "Oponente: blz?",
+        "Você: tudo bem?",
+        "Você: tudo bem?",
+        "Você: tudo bem? eae? vai jogar?",
+        "Você: tudo bem? eae? vai jogar?",
+        "Você: tudo bem? eae? vai jogar?",
+        "Você: tudo bem? eae? vai jogar?",
+        "Você: tudo bem? eae? vai jogar?",
+        "Você: tudo bem? eae? vai jogar?",
+        "Você: tudo bem? eae? vai jogar?",
+        "Você: tudo bem? eae? vai jogar?",
+        "Você: tudo bem? eae? vai jogar?",
+        "Você: tudo bem? eae? vai jogar?",
+        "Você: tudo bem? eae? vai jogar?",
+        "Você: tudo bem? eae? vai jogar?",
+        "Você: tudo bem? eae? vai jogar?",
+        "Você: tudo bem? eae? vai jogar?",
+    ]
     while not sair:
-        for evento in pygame.event.get():
+        event_list = pygame.event.get()
+        for evento in event_list:
             if evento.type == pygame.QUIT:
                 sair = True
                 pygame.quit()
             if evento.type == pygame.MOUSEBUTTONDOWN:
                 jogo.avalia_posicao_clicada(pygame.mouse.get_pos())
+            if evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_UP:
+                    offset += 20
+                if evento.key == pygame.K_DOWN:
+                    offset -= 20
 
         display.fill(BRANCO)
         jogo.desenha_tabuleiro()
+        criar_chat(textos, offset)
+        offset = botoes_chat(offset)
         jogo.desenha_menu()
-        criar_chat()
 
         fim_jogo = jogo.verifica_fim_jogo()
         if fim_jogo is not None:
