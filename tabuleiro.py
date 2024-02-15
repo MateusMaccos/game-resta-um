@@ -282,12 +282,7 @@ def criar_chat(textos, offset):
     PADDING = 110
     MARGIN = 50
     pygame.draw.rect(display, CINZA, (ALTURA, 120, LARGURA - ALTURA, ALTURA - 120))
-    # chatFinal = []
-    # inicio = len(textos) - 21
-    # for i in range(inicio, len(textos)):
-    #     chatFinal.append(textos[i])
     for texto in textos:
-        # if len(texto)>20:
         posicao = ALTURA
         if texto.__contains__("Você"):
             text_surface = font_parametro("calibri", 30).render(
@@ -387,6 +382,3 @@ def loop_jogo():
 
         pygame.display.update()
         clock.tick(60)
-
-
-loop_jogo()

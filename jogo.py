@@ -3,9 +3,62 @@ import pygame
 import button
 import textInput
 import socket
-import socketServer
-import socketCliente
 import threading
+import tabuleiro
+
+
+def receber_msg(conn):
+    while True:
+        data = conn.recv(1024)
+        if not data:
+            break
+        print("Cliente: " + data.decode())
+
+
+def enviar_msg(conn):
+    while True:
+        console = input()
+        conn.sendall(console.encode())
+
+
+class Server:
+    def __init__(self):
+        self.conectado = False
+        self.endereco = None
+        self.connection = None
+
+    def run(self, ip, porta):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind((ip, porta))
+            s.listen()
+            print(f"Esperando cliente")
+            conn, addr = s.accept()
+            with conn:
+                self.endereco = addr
+                self.conectado = True
+                print(f"Conectou em {addr}")
+                thread_receber = threading.Thread(target=receber_msg, args=(conn,))
+                thread_receber.start()
+                enviar_msg(conn)
+
+
+class Cliente:
+    def __init__(self):
+        self.conectado = False
+        self.error = False
+
+    def run(self, ip, porta):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((ip, int(porta)))
+                self.conectado = True
+                thread_receber = threading.Thread(target=receber_msg, args=(s,))
+                thread_receber.start()
+                enviar_msg(s)
+        except:
+            print("Não foi possivel conectar")
+            self.conectado = False
+            self.error = True
 
 
 def pegar_porta_livre_tcp():
@@ -97,16 +150,19 @@ def janela_jogo(selecao):
     botao_voltar = button.Button(10, 10, voltar_img, 1)
     botao_entrar = button.Button(500, 600, cliente_img, 1)
 
+    server = Server()
+    cliente = Cliente()
+
     # Cores - RGB
     preta = (0, 0, 0)
     branca = (255, 255, 255)
 
     def start_server(ip, porta):
-        t_server = threading.Thread(target=socketServer.servidor, args=(ip, porta))
+        t_server = threading.Thread(target=server.run, args=(ip, porta))
         t_server.start()
 
     def start_cliente(ip, porta):
-        t_cliente = threading.Thread(target=socketCliente.cliente, args=(ip, porta))
+        t_cliente = threading.Thread(target=cliente.run, args=(ip, porta))
         t_cliente.start()
 
     def entrar_jogo():
@@ -130,6 +186,8 @@ def janela_jogo(selecao):
                 encerrar = True
             if botao_entrar.draw(tela):
                 start_cliente(ip_input.text, port_input.text)
+            if cliente.conectado == True:
+                tabuleiro.loop_jogo()
 
             event_list = pygame.event.get()
             for evento in event_list:
@@ -143,13 +201,12 @@ def janela_jogo(selecao):
             pygame.display.update()
 
     def hostear_jogo():
-        conectou = False
         encerrar = False
         hostname = socket.gethostname()
         porta = pegar_porta_livre_tcp()
         ip = socket.gethostbyname(hostname)
         start_server(ip, porta)
-        while not conectou and not encerrar:
+        while not encerrar:
             tela.fill(branca)
             desenhar_background(tela, background)
             draw_text(
@@ -170,6 +227,8 @@ def janela_jogo(selecao):
             )
             if botao_voltar.draw(tela):
                 encerrar = True
+            if server.conectado == True:
+                tabuleiro.loop_jogo()
 
             # Atualização da tela
             pygame.display.update()
