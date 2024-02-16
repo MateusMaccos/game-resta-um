@@ -17,7 +17,7 @@ font = pygame.font.SysFont("arialblack", 40)
 fontFina = pygame.font.SysFont("calibri", 40)
 font_maior = pygame.font.SysFont("arialblack", 60)
 background = pygame.image.load("images/menu.jpg")
-textos = []
+textos = ["eae", "ola"]
 
 
 def font_parametro(fonte, tamanho):
@@ -281,8 +281,8 @@ def tela_fim_jogo(jogo, fim):
         clock.tick(60)
 
 
-def criar_chat(textos, offset):
-    PADDING = ALTURA - 100
+def criar_chat(textos, offset, event_list):
+    PADDING = ALTURA - 115
     MARGIN = 50
     pygame.draw.rect(display, CINZA, (ALTURA, 120, LARGURA - ALTURA, ALTURA - 120))
     for texto in reversed(textos):
@@ -323,10 +323,14 @@ def botoes_chat(offset):
     return offset
 
 
-def loop_jogo():
+def loop_jogo(tipo):
     jogo = Jogo()
     sair = False
     offset = 0
+    textField = textInput.TextInputBox(
+        ALTURA, ALTURA - 30, LARGURA - ALTURA, font_parametro("calibri", 20)
+    )
+    group_text = pygame.sprite.Group(textField)
     while not sair:
         event_list = pygame.event.get()
         for evento in event_list:
@@ -340,12 +344,20 @@ def loop_jogo():
                     offset += 20
                 if evento.key == pygame.K_DOWN:
                     offset -= 20
+                if evento.key == pygame.K_RETURN:
+                    if tipo == "cliente":
+                        cliente.enviar_mensagem(textField.text)
+                    else:
+                        server.enviar_mensagem(textField.text)
+                    textField.text = ""
 
         display.fill(BRANCO)
         jogo.desenha_tabuleiro()
-        criar_chat(textos, offset)
+        criar_chat(textos, offset, event_list)
         offset = botoes_chat(offset)
         jogo.desenha_menu()
+        textField.update(event_list)
+        group_text.draw(display)
 
         fim_jogo = jogo.verifica_fim_jogo()
         if fim_jogo is not None:
@@ -356,7 +368,7 @@ def loop_jogo():
         clock.tick(60)
 
 
-def receber_msg(conn, origem):
+def receber_msg(conn):
     while True:
         data = conn.recv(1024)
         if not data:
@@ -365,11 +377,9 @@ def receber_msg(conn, origem):
             textos.append("Oponente: " + str(data.decode()).split("msg:", 1)[1])
 
 
-def enviar_msg(conn, origem):
-    while True:
-        console = input()
-        conn.sendall(("msg:" + console).encode())
-        textos.append("Você: " + console)
+def enviar_msg(conn, msg):
+    conn.sendall(("msg:" + msg).encode())
+    textos.append("Você: " + msg)
 
 
 class Server:
@@ -387,17 +397,20 @@ class Server:
             with conn:
                 self.endereco = addr
                 self.conectado = True
+                self.connection = conn
                 print(f"Conectou em {addr}")
-                thread_receber = threading.Thread(
-                    target=receber_msg, args=(conn, "cliente")
-                )
+                thread_receber = threading.Thread(target=receber_msg, args=(conn,))
                 thread_receber.start()
-                enviar_msg(conn, "servidor")
+                thread_receber.join()
+
+    def enviar_mensagem(self, msg):
+        enviar_msg(self.connection, msg)
 
 
 class Cliente:
     def __init__(self):
         self.conectado = False
+        self.connection = None
         self.error = False
 
     def run(self, ip, porta):
@@ -405,15 +418,21 @@ class Cliente:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((ip, int(porta)))
                 self.conectado = True
-                thread_receber = threading.Thread(
-                    target=receber_msg, args=(s, "servidor")
-                )
+                self.connection = s
+                thread_receber = threading.Thread(target=receber_msg, args=(s,))
                 thread_receber.start()
-                enviar_msg(s, "cliente")
+                thread_receber.join()
         except:
             print("Não foi possivel conectar")
             self.conectado = False
             self.error = True
+
+    def enviar_mensagem(self, msg):
+        enviar_msg(self.connection, msg)
+
+
+server = Server()
+cliente = Cliente()
 
 
 def pegar_porta_livre_tcp():
@@ -505,9 +524,6 @@ def janela_jogo(selecao):
     botao_voltar = button.Button(10, 10, voltar_img, 1)
     botao_entrar = button.Button(500, 600, cliente_img, 1)
 
-    server = Server()
-    cliente = Cliente()
-
     # Cores - RGB
     preta = (0, 0, 0)
     branca = (255, 255, 255)
@@ -542,7 +558,7 @@ def janela_jogo(selecao):
             if botao_entrar.draw(tela):
                 start_cliente(ip_input.text, port_input.text)
             if cliente.conectado == True:
-                loop_jogo()
+                loop_jogo("cliente")
 
             event_list = pygame.event.get()
             for evento in event_list:
@@ -583,7 +599,7 @@ def janela_jogo(selecao):
             if botao_voltar.draw(tela):
                 encerrar = True
             if server.conectado == True:
-                loop_jogo()
+                loop_jogo("server")
 
             # Atualização da tela
             pygame.display.update()
