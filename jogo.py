@@ -17,7 +17,7 @@ font = pygame.font.SysFont("arialblack", 40)
 fontFina = pygame.font.SysFont("calibri", 40)
 font_maior = pygame.font.SysFont("arialblack", 60)
 background = pygame.image.load("images/menu.jpg")
-textos = ["eae", "ola"]
+textos = []
 
 
 def font_parametro(fonte, tamanho):
@@ -80,7 +80,6 @@ class Jogo:
             if [linha, coluna] in movimentos:
                 self.posicaoFinal = [linha, coluna]
                 self.moverPeca(self.posicaoInicial, self.posicaoFinal)
-                self.seu_turno = not self.seu_turno
                 if self.socketAtual == "cliente":
                     cliente.enviar_mensagem(
                         f"jogada:({self.posicaoInicial[0]},{self.posicaoInicial[1]})({self.posicaoFinal[0]},{self.posicaoFinal[1]})"
@@ -91,7 +90,6 @@ class Jogo:
                     )
                 self.posicaoInicial = None
                 self.posicaoFinal = None
-                self.seu_turno = not self.seu_turno
             else:
                 if self.tabuleiro[linha][coluna] == 1:
                     self.posicaoInicial = [linha, coluna]
@@ -209,6 +207,7 @@ class Jogo:
             self.tabuleiro[final[0] - 1][final[1]] = 0
         elif final[0] < inicial[0]:
             self.tabuleiro[final[0] + 1][final[1]] = 0
+        self.seu_turno = not self.seu_turno
 
     def verifica_fim_jogo(self):
         somador = sum([contador.count(1) for contador in self.tabuleiro])
@@ -397,9 +396,11 @@ def receber_msg(conn):
         if str(data.decode()).startswith("msg:"):
             textos.append("Oponente: " + str(data.decode()).split("msg:", 1)[1])
         if str(data.decode()).startswith("jogada:"):
-            jogada = str(data.decode()).split("jogada:", 1)[1]
-            print(jogada)
-            # jogo.moverPeca(self.posicaoInicial, self.posicaoFinal)
+            jogada = str(data.decode())
+            jogada = jogada.split("jogada:", 1)[1]
+            posicaoInicial = [int(jogada[1]), int(jogada[3])]
+            posicaoFinal = [int(jogada[6]), int(jogada[8])]
+            jogo.moverPeca(posicaoInicial, posicaoFinal)
 
 
 def enviar_msg(conn, msg):
