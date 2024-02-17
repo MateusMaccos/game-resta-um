@@ -35,13 +35,13 @@ CINZA_CLARO = (100, 100, 100)
 
 
 def desenhar_background(tela, image):
-    size = pygame.transform.scale(image, (1200, 800))
-    display.blit(image, (0, 0))
+    pygame.transform.scale(image, (1200, 800))
+    tela.blit(image, (0, 0))
 
 
 def draw_text(tela, text, font, text_col, x, y):
     img = font.render(text, True, text_col)
-    display.blit(img, (x, y))
+    tela.blit(img, (x, y))
 
 
 class Jogo:
@@ -355,6 +355,8 @@ def loop_jogo(tipo):
         for evento in event_list:
             if evento.type == pygame.QUIT:
                 sair = True
+                cliente.encerrar = True
+                server.encerrar = True
                 pygame.quit()
             if evento.type == pygame.MOUSEBUTTONDOWN:
                 if jogo.seu_turno:
@@ -388,8 +390,8 @@ def loop_jogo(tipo):
         clock.tick(60)
 
 
-def receber_msg(conn):
-    while True:
+def receber_msg(encerrar, conn):
+    while not encerrar:
         data = conn.recv(1024)
         if not data:
             break
@@ -416,19 +418,30 @@ class Server:
         self.conectado = False
         self.endereco = None
         self.connection = None
+        self.encerrar = False
 
     def run(self, ip, porta):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((ip, porta))
             s.listen()
             print(f"Esperando cliente")
-            conn, addr = s.accept()
+            try:
+                conn, addr = s.accept()
+            except:
+                print("Deu ruim")
+
             with conn:
                 self.endereco = addr
                 self.conectado = True
                 self.connection = conn
                 print(f"Conectou em {addr}")
-                thread_receber = threading.Thread(target=receber_msg, args=(conn,))
+                thread_receber = threading.Thread(
+                    target=receber_msg,
+                    args=(
+                        self.encerrar,
+                        conn,
+                    ),
+                )
                 thread_receber.start()
                 thread_receber.join()
 
@@ -441,6 +454,7 @@ class Cliente:
         self.conectado = False
         self.connection = None
         self.error = False
+        self.encerrar = False
 
     def run(self, ip, porta):
         try:
@@ -448,7 +462,13 @@ class Cliente:
                 s.connect((ip, int(porta)))
                 self.conectado = True
                 self.connection = s
-                thread_receber = threading.Thread(target=receber_msg, args=(s,))
+                thread_receber = threading.Thread(
+                    target=receber_msg,
+                    args=(
+                        self.encerrar,
+                        s,
+                    ),
+                )
                 thread_receber.start()
                 thread_receber.join()
         except:
@@ -470,16 +490,6 @@ def pegar_porta_livre_tcp():
     addr, port = tcp.getsockname()
     tcp.close()
     return port
-
-
-def draw_text(tela, text, font, text_col, x, y):
-    img = font.render(text, True, text_col)
-    tela.blit(img, (x, y))
-
-
-def desenhar_background(tela, image):
-    size = pygame.transform.scale(image, (1200, 800))
-    tela.blit(image, (0, 0))
 
 
 def gerar_menu():
