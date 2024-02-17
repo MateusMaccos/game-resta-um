@@ -59,6 +59,14 @@ class Jogo:
         self.posicaoInicial = None
         self.posicaoFinal = None
         self.estado_atual = "Jogando"
+        self.socketAtual = None
+
+    def definir_socket(self, tipo):
+        self.socketAtual = tipo
+        if tipo == "cliente":
+            self.seu_turno = False
+        else:
+            self.seu_turno = True
 
     def avalia_posicao_clicada(self, coordenada):
         linha, coluna = linha_clicada(coordenada), coluna_clicada(coordenada)
@@ -73,8 +81,17 @@ class Jogo:
                 self.posicaoFinal = [linha, coluna]
                 self.moverPeca(self.posicaoInicial, self.posicaoFinal)
                 self.seu_turno = not self.seu_turno
+                if self.socketAtual == "cliente":
+                    cliente.enviar_mensagem(
+                        f"jogada:({self.posicaoInicial[0]},{self.posicaoInicial[1]})({self.posicaoFinal[0]},{self.posicaoFinal[1]})"
+                    )
+                else:
+                    server.enviar_mensagem(
+                        f"jogada:({self.posicaoInicial[0]},{self.posicaoInicial[1]})({self.posicaoFinal[0]},{self.posicaoFinal[1]})"
+                    )
                 self.posicaoInicial = None
                 self.posicaoFinal = None
+                self.seu_turno = not self.seu_turno
             else:
                 if self.tabuleiro[linha][coluna] == 1:
                     self.posicaoInicial = [linha, coluna]
@@ -208,6 +225,9 @@ class Jogo:
         return False
 
 
+jogo = Jogo()
+
+
 def coluna_clicada(pos):
     x = pos[0]
     for i in range(1, 7):
@@ -324,7 +344,7 @@ def botoes_chat(offset):
 
 
 def loop_jogo(tipo):
-    jogo = Jogo()
+    jogo.definir_socket(tipo)
     sair = False
     offset = 0
     textField = textInput.TextInputBox(
@@ -338,7 +358,8 @@ def loop_jogo(tipo):
                 sair = True
                 pygame.quit()
             if evento.type == pygame.MOUSEBUTTONDOWN:
-                jogo.avalia_posicao_clicada(pygame.mouse.get_pos())
+                if jogo.seu_turno:
+                    jogo.avalia_posicao_clicada(pygame.mouse.get_pos())
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_UP:
                     offset += 20
@@ -375,11 +396,18 @@ def receber_msg(conn):
             break
         if str(data.decode()).startswith("msg:"):
             textos.append("Oponente: " + str(data.decode()).split("msg:", 1)[1])
+        if str(data.decode()).startswith("jogada:"):
+            jogada = str(data.decode()).split("jogada:", 1)[1]
+            print(jogada)
+            # jogo.moverPeca(self.posicaoInicial, self.posicaoFinal)
 
 
 def enviar_msg(conn, msg):
-    conn.sendall(("msg:" + msg).encode())
-    textos.append("Você: " + msg)
+    if msg.startswith("jogada:"):
+        conn.sendall((msg).encode())
+    else:
+        conn.sendall(("msg:" + msg).encode())
+        textos.append("Você: " + msg)
 
 
 class Server:
