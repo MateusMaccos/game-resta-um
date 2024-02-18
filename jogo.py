@@ -17,6 +17,8 @@ font = pygame.font.SysFont("arialblack", 40)
 fontFina = pygame.font.SysFont("calibri", 40)
 font_maior = pygame.font.SysFont("arialblack", 60)
 background = pygame.image.load("images/menu.jpg")
+desistir_img = pygame.image.load("images/botao_desistir.jpg")
+botao_desistir = button.Button(LARGURA - 100, 0, desistir_img, 0.5)
 textos = []
 
 
@@ -215,6 +217,8 @@ class Jogo:
             return "Fim"
         if not self.existe_mov_possivel():
             return "Empate"
+        if jogo.estado_atual in ["Desistencia", "Desistiu"]:
+            return jogo.estado_atual
 
     def existe_mov_possivel(self):
         for l in range(len(self.tabuleiro)):
@@ -252,6 +256,8 @@ def tela_fim_jogo(jogo, fim):
                 pygame.quit()
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_SPACE:
+                    server.encerrar = True
+                    cliente.encerrar = True
                     sair = True
 
         display.fill(BRANCO)
@@ -283,6 +289,21 @@ def tela_fim_jogo(jogo, fim):
             draw_text(
                 display,
                 f"{mensagem} venceu!",
+                font_maior,
+                COR_TABULEIRO,
+                distancia,
+                400,
+            )
+        elif fim in ["Desistencia", "Desistiu"]:
+            if jogo.estado_atual == "Desistiu":
+                mensagem = "Você desistiu!"
+                distancia = 400
+            else:
+                mensagem = "Seu oponente desistiu!"
+                distancia = 250
+            draw_text(
+                display,
+                f"{mensagem}",
                 font_maior,
                 COR_TABULEIRO,
                 distancia,
@@ -381,6 +402,13 @@ def loop_jogo(tipo):
         textField.update(event_list)
         group_text.draw(display)
 
+        if botao_desistir.draw(display):
+            jogo.estado_atual = "Desistiu"
+            if tipo == "servidor":
+                server.enviar_mensagem("desistencia")
+            else:
+                cliente.enviar_mensagem("desistencia")
+
         fim_jogo = jogo.verifica_fim_jogo()
         if fim_jogo is not None:
             sair = True
@@ -403,10 +431,14 @@ def receber_msg(encerrar, conn):
             posicaoInicial = [int(jogada[1]), int(jogada[3])]
             posicaoFinal = [int(jogada[6]), int(jogada[8])]
             jogo.moverPeca(posicaoInicial, posicaoFinal)
+        if str(data.decode()) == "desistencia":
+            jogo.estado_atual = "Desistencia"
 
 
 def enviar_msg(conn, msg):
     if msg.startswith("jogada:"):
+        conn.sendall((msg).encode())
+    elif msg == "desistencia":
         conn.sendall((msg).encode())
     else:
         conn.sendall(("msg:" + msg).encode())
@@ -419,11 +451,13 @@ class Server:
         self.endereco = None
         self.connection = None
         self.encerrar = False
+        self.socket = None
 
     def run(self, ip, porta):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((ip, porta))
             s.listen()
+            self.socket = s
             print(f"Esperando cliente")
             try:
                 conn, addr = s.accept()
@@ -637,6 +671,9 @@ def janela_jogo(selecao):
             )
             if botao_voltar.draw(tela):
                 encerrar = True
+                cliente.encerrar = True
+                server.encerrar = True
+                server.socket.close()
             if server.conectado == True:
                 loop_jogo("server")
 
@@ -645,6 +682,9 @@ def janela_jogo(selecao):
             for evento in pygame.event.get():
                 if evento.type == pygame.QUIT:
                     encerrar = True
+                    cliente.encerrar = True
+                    server.encerrar = True
+                    server.socket.close()
 
     if selecao == "servidor":
         hostear_jogo()
