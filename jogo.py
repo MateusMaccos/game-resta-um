@@ -228,9 +228,6 @@ class Jogo:
         return False
 
 
-jogo = Jogo()
-
-
 def coluna_clicada(pos):
     x = pos[0]
     for i in range(1, 7):
@@ -364,6 +361,8 @@ def botoes_chat(offset):
 
 
 def loop_jogo(tipo):
+    global jogo 
+    jogo = Jogo()
     jogo.definir_socket(tipo)
     sair = False
     offset = 0
@@ -514,10 +513,6 @@ class Cliente:
         enviar_msg(self.connection, msg)
 
 
-server = Server()
-cliente = Cliente()
-
-
 def pegar_porta_livre_tcp():
     tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp.bind(("", 0))
@@ -597,6 +592,11 @@ def janela_jogo(selecao):
     botao_voltar = button.Button(10, 10, voltar_img, 1)
     botao_entrar = button.Button(500, 600, cliente_img, 1)
 
+    global server
+    global cliente
+    server = Server()
+    cliente = Cliente()
+
     # Cores - RGB
     preta = (0, 0, 0)
     branca = (255, 255, 255)
@@ -612,7 +612,7 @@ def janela_jogo(selecao):
     def entrar_jogo():
         encerrar = False
         ip_input = textInput.TextInputBox(400, 500, 400, font)
-        port_input = textInput.TextInputBox(900, 500, 100, font)
+        port_input = textInput.TextInputBox(900, 500, 200, font)
         group_ip = pygame.sprite.Group(ip_input)
         group_port = pygame.sprite.Group(port_input)
         while not encerrar:
