@@ -19,7 +19,6 @@ font_maior = pygame.font.SysFont("arialblack", 60)
 background = pygame.image.load("images/menu.jpg")
 desistir_img = pygame.image.load("images/botao_desistir.jpg")
 botao_desistir = button.Button(LARGURA - 100, 0, desistir_img, 0.5)
-textos = []
 
 
 def font_parametro(fonte, tamanho):
@@ -48,24 +47,24 @@ def draw_text(tela, text, font, text_col, x, y):
 
 class Jogo:
     def __init__(self):
-        # self.tabuleiro = [
-        #     [-1, -1, 0, 0, 0, -1, -1],
-        #     [-1, -1, 0, 0, 0, -1, -1],
-        #     [0, 0, 0, 0, 0, 0, 0],
-        #     [0, 0, 0, 0, 0, 0, 0],
-        #     [0, 0, 0, 0, 0, 1, 1],
-        #     [-1, -1, 0, 0, 0, -1, -1],
-        #     [-1, -1, 0, 0, 0, -1, -1],
-        # ]
         self.tabuleiro = [
-            [-1, -1, 1, 1, 1, -1, -1],
-            [-1, -1, 1, 1, 1, -1, -1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 0, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [-1, -1, 1, 1, 1, -1, -1],
-            [-1, -1, 1, 1, 1, -1, -1],
+            [-1, -1, 0, 0, 0, -1, -1],
+            [-1, -1, 0, 0, 0, -1, -1],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 1],
+            [-1, -1, 0, 0, 0, -1, -1],
+            [-1, -1, 0, 0, 0, -1, -1],
         ]
+        # self.tabuleiro = [
+        #     [-1, -1, 1, 1, 1, -1, -1],
+        #     [-1, -1, 1, 1, 1, -1, -1],
+        #     [1, 1, 1, 1, 1, 1, 1],
+        #     [1, 1, 1, 0, 1, 1, 1],
+        #     [1, 1, 1, 1, 1, 1, 1],
+        #     [-1, -1, 1, 1, 1, -1, -1],
+        #     [-1, -1, 1, 1, 1, -1, -1],
+        # ]
         self.seu_turno = True
         self.posicaoInicial = None
         self.posicaoFinal = None
@@ -476,6 +475,8 @@ def loop_jogo(tipo):
     global jogo
     jogo = Jogo()
     jogo.definir_socket(tipo)
+    global textos
+    textos = []
     sair = False
     offset = 0
     textField = textInput.TextInputBox(
@@ -660,8 +661,8 @@ def janela_jogo(selecao):
 
     def entrar_jogo():
         encerrar = False
-        ip_input = textInput.TextInputBox(400, 500, 400, font)
-        port_input = textInput.TextInputBox(900, 500, 200, font)
+        ip_input = textInput.TextInputBox(250, 480, 400, font)
+        port_input = textInput.TextInputBox(770, 480, 200, font)
         group_ip = pygame.sprite.Group(ip_input)
         group_port = pygame.sprite.Group(port_input)
         while not encerrar:
@@ -675,7 +676,24 @@ def janela_jogo(selecao):
                 200,
                 380,
             )
+            draw_text(
+                tela,
+                "IP:",
+                font_parametro("calibri", 30),
+                preta,
+                200,
+                500,
+            )
+            draw_text(
+                tela,
+                "PORTA:",
+                font_parametro("calibri", 30),
+                preta,
+                670,
+                500,
+            )
             if botao_voltar.draw(tela):
+                cliente.encerrarConexao()
                 encerrar = True
             if botao_entrar.draw(tela):
                 start_cliente(ip_input.text, port_input.text)
