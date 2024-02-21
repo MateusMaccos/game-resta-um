@@ -48,6 +48,15 @@ def draw_text(tela, text, font, text_col, x, y):
 
 class Jogo:
     def __init__(self):
+        # self.tabuleiro = [
+        #     [-1, -1, 0, 0, 0, -1, -1],
+        #     [-1, -1, 0, 0, 0, -1, -1],
+        #     [0, 0, 0, 0, 0, 0, 0],
+        #     [0, 0, 0, 0, 0, 0, 0],
+        #     [0, 0, 0, 0, 0, 1, 1],
+        #     [-1, -1, 0, 0, 0, -1, -1],
+        #     [-1, -1, 0, 0, 0, -1, -1],
+        # ]
         self.tabuleiro = [
             [-1, -1, 1, 1, 1, -1, -1],
             [-1, -1, 1, 1, 1, -1, -1],
@@ -217,7 +226,7 @@ class Jogo:
             return "Fim"
         if not self.existe_mov_possivel():
             return "Empate"
-        if jogo.estado_atual in ["Desistencia", "Desistiu"]:
+        if jogo.estado_atual in ["Desistencia", "Desistiu", "Desconectou"]:
             return jogo.estado_atual
 
     def existe_mov_possivel(self):
@@ -226,6 +235,97 @@ class Jogo:
                 if self.tabuleiro[l][c] == 1 and self.posicoesPossiveis(l, c) != []:
                     return True
         return False
+
+
+class Server:
+    def __init__(self):
+        self.conectado = False
+        self.endereco = None
+        self.connection = None
+        self.encerrar = False
+        self.socket = None
+
+    def run(self, ip, porta):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind((ip, porta))
+            s.listen()
+            self.socket = s
+            print(f"Esperando cliente")
+            try:
+                conn, addr = s.accept()
+            except:
+                print("Deu ruim")
+
+            with conn:
+                self.endereco = addr
+                self.conectado = True
+                self.connection = conn
+                print(f"Conectou em {addr}")
+                thread_receber = threading.Thread(
+                    target=receber_msg,
+                    args=(
+                        self.encerrar,
+                        conn,
+                    ),
+                )
+                thread_receber.start()
+                thread_receber.join()
+
+    def encerrarConexao(self):
+        self.encerrar = True
+        self.conectado = False
+        if self.connection:
+            try:
+                self.connection.shutdown(socket.SHUT_RDWR)
+            except Exception as e:
+                print(f"Erro ao encerrar conexão: {e}")
+
+    def enviar_mensagem(self, msg):
+        enviar_msg(self.connection, msg)
+
+
+class Cliente:
+    def __init__(self):
+        self.conectado = False
+        self.connection = None
+        self.error = False
+        self.encerrar = False
+
+    def run(self, ip, porta):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((ip, int(porta)))
+                self.conectado = True
+                self.connection = s
+                thread_receber = threading.Thread(
+                    target=receber_msg,
+                    args=(
+                        self.encerrar,
+                        s,
+                    ),
+                )
+                thread_receber.start()
+                thread_receber.join()
+        except ConnectionRefusedError:
+            print("A conexão foi recusada pelo servidor.")
+            self.conectado = False
+            self.error = True
+        except Exception as e:
+            print(f"Erro ao conectar: {e}")
+            self.conectado = False
+            self.error = True
+
+    def encerrarConexao(self):
+        self.encerrar = True
+        self.conectado = False
+        if self.connection:
+            try:
+                self.connection.shutdown(socket.SHUT_RDWR)
+            except Exception as e:
+                print(f"Erro ao encerrar conexão: {e}")
+
+    def enviar_mensagem(self, msg):
+        enviar_msg(self.connection, msg)
 
 
 def coluna_clicada(pos):
@@ -244,7 +344,7 @@ def linha_clicada(pos):
     return 6
 
 
-def tela_fim_jogo(jogo, fim):
+def tela_fim_jogo(fim):
     sair = False
     while not sair:
         for evento in pygame.event.get():
@@ -256,6 +356,7 @@ def tela_fim_jogo(jogo, fim):
                     server.encerrar = True
                     cliente.encerrar = True
                     sair = True
+                    return True
 
         display.fill(BRANCO)
         desenhar_background(display, background)
@@ -277,7 +378,7 @@ def tela_fim_jogo(jogo, fim):
                 400,
             )
         elif fim == "Fim":
-            if jogo.seu_turno:
+            if not jogo.seu_turno:
                 mensagem = "Você"
                 distancia = 400
             else:
@@ -298,6 +399,17 @@ def tela_fim_jogo(jogo, fim):
             else:
                 mensagem = "Seu oponente desistiu!"
                 distancia = 250
+            draw_text(
+                display,
+                f"{mensagem}",
+                font_maior,
+                COR_TABULEIRO,
+                distancia,
+                400,
+            )
+        elif fim == "Desconectou":
+            mensagem = "Seu oponente desconectou!"
+            distancia = 250
             draw_text(
                 display,
                 f"{mensagem}",
@@ -361,7 +473,7 @@ def botoes_chat(offset):
 
 
 def loop_jogo(tipo):
-    global jogo 
+    global jogo
     jogo = Jogo()
     jogo.definir_socket(tipo)
     sair = False
@@ -375,9 +487,13 @@ def loop_jogo(tipo):
         for evento in event_list:
             if evento.type == pygame.QUIT:
                 sair = True
-                cliente.encerrar = True
-                server.encerrar = True
-                pygame.quit()
+                if tipo == "cliente":
+                    cliente.enviar_mensagem("desconectou")
+                    cliente.encerrarConexao()
+                else:
+                    server.enviar_mensagem("desconectou")
+                    server.encerrarConexao()
+                return True
             if evento.type == pygame.MOUSEBUTTONDOWN:
                 if jogo.seu_turno:
                     jogo.avalia_posicao_clicada(pygame.mouse.get_pos())
@@ -392,7 +508,8 @@ def loop_jogo(tipo):
                     else:
                         server.enviar_mensagem(textField.text)
                     textField.text = ""
-
+        if sair:
+            break
         display.fill(BRANCO)
         jogo.desenha_tabuleiro()
         criar_chat(textos, offset, event_list)
@@ -411,7 +528,9 @@ def loop_jogo(tipo):
         fim_jogo = jogo.verifica_fim_jogo()
         if fim_jogo is not None:
             sair = True
-            tela_fim_jogo(jogo, fim_jogo)
+            encerrar = tela_fim_jogo(fim_jogo)
+            if encerrar:
+                return True
 
         pygame.display.update()
         clock.tick(60)
@@ -419,98 +538,36 @@ def loop_jogo(tipo):
 
 def receber_msg(encerrar, conn):
     while not encerrar:
-        data = conn.recv(1024)
-        if not data:
+        try:
+            data = conn.recv(1024)
+            if not data:
+                server.encerrarConexao()
+                cliente.encerrarConexao()
+                break
+            if str(data.decode()).startswith("msg:"):
+                textos.append("Oponente: " + str(data.decode()).split("msg:", 1)[1])
+            if str(data.decode()).startswith("jogada:"):
+                jogada = str(data.decode())
+                jogada = jogada.split("jogada:", 1)[1]
+                posicaoInicial = [int(jogada[1]), int(jogada[3])]
+                posicaoFinal = [int(jogada[6]), int(jogada[8])]
+                jogo.moverPeca(posicaoInicial, posicaoFinal)
+            if str(data.decode()) == "desistencia":
+                jogo.estado_atual = "Desistencia"
+            if str(data.decode()) == "desconectou":
+                jogo.estado_atual = "Desconectou"
+        except Exception as e:
+            print(f"Erro ao receber mensagem: {e}")
+            encerrar = True
             break
-        if str(data.decode()).startswith("msg:"):
-            textos.append("Oponente: " + str(data.decode()).split("msg:", 1)[1])
-        if str(data.decode()).startswith("jogada:"):
-            jogada = str(data.decode())
-            jogada = jogada.split("jogada:", 1)[1]
-            posicaoInicial = [int(jogada[1]), int(jogada[3])]
-            posicaoFinal = [int(jogada[6]), int(jogada[8])]
-            jogo.moverPeca(posicaoInicial, posicaoFinal)
-        if str(data.decode()) == "desistencia":
-            jogo.estado_atual = "Desistencia"
 
 
 def enviar_msg(conn, msg):
-    if msg.startswith("jogada:"):
-        conn.sendall((msg).encode())
-    elif msg == "desistencia":
+    if msg.startswith("jogada:") or msg == "desistencia" or msg == "desconectou":
         conn.sendall((msg).encode())
     else:
         conn.sendall(("msg:" + msg).encode())
         textos.append("Você: " + msg)
-
-
-class Server:
-    def __init__(self):
-        self.conectado = False
-        self.endereco = None
-        self.connection = None
-        self.encerrar = False
-        self.socket = None
-
-    def run(self, ip, porta):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((ip, porta))
-            s.listen()
-            self.socket = s
-            print(f"Esperando cliente")
-            try:
-                conn, addr = s.accept()
-            except:
-                print("Deu ruim")
-
-            with conn:
-                self.endereco = addr
-                self.conectado = True
-                self.connection = conn
-                print(f"Conectou em {addr}")
-                thread_receber = threading.Thread(
-                    target=receber_msg,
-                    args=(
-                        self.encerrar,
-                        conn,
-                    ),
-                )
-                thread_receber.start()
-                thread_receber.join()
-
-    def enviar_mensagem(self, msg):
-        enviar_msg(self.connection, msg)
-
-
-class Cliente:
-    def __init__(self):
-        self.conectado = False
-        self.connection = None
-        self.error = False
-        self.encerrar = False
-
-    def run(self, ip, porta):
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((ip, int(porta)))
-                self.conectado = True
-                self.connection = s
-                thread_receber = threading.Thread(
-                    target=receber_msg,
-                    args=(
-                        self.encerrar,
-                        s,
-                    ),
-                )
-                thread_receber.start()
-                thread_receber.join()
-        except:
-            print("Não foi possivel conectar")
-            self.conectado = False
-            self.error = True
-
-    def enviar_mensagem(self, msg):
-        enviar_msg(self.connection, msg)
 
 
 def pegar_porta_livre_tcp():
@@ -529,11 +586,7 @@ def gerar_menu():
     pygame.display.set_caption("Menu")
 
     # variaveis
-    failed = False
-
-    font = pygame.font.SysFont("arialblack", 40)
-
-    textColor = (255, 255, 255)
+    finish = False
 
     background = pygame.image.load("images/menu.jpg")
 
@@ -553,23 +606,18 @@ def gerar_menu():
         telaMenu.fill((0, 0, 0))
         desenhar_background(telaMenu, background)
 
-        if failed == False:
+        if not finish:
             if botao_servidor.draw(telaMenu):
-                janela_jogo("servidor")
+                finish = janela_jogo("servidor")
+                if finish:
+                    break
             if botao_cliente.draw(telaMenu):
-                janela_jogo("cliente")
+                finish = janela_jogo("cliente")
+                if finish:
+                    break
             if botao_sair.draw(telaMenu):
                 run = False
-        elif failed == "sair":
-            run = False
-        else:
-            draw_text(
-                "Você perdeu, aperte espaço para ir pro menu!",
-                font,
-                textColor,
-                100,
-                380,
-            )
+                break
         event_list = pygame.event.get()
         for event in event_list:
             if event.type == pygame.KEYDOWN:
@@ -578,6 +626,7 @@ def gerar_menu():
             if event.type == pygame.QUIT:
                 run = False
         pygame.display.update()
+    pygame.quit()
 
 
 def janela_jogo(selecao):
@@ -631,8 +680,9 @@ def janela_jogo(selecao):
             if botao_entrar.draw(tela):
                 start_cliente(ip_input.text, port_input.text)
             if cliente.conectado == True:
-                loop_jogo("cliente")
-
+                encerrar = loop_jogo("cliente")
+                if encerrar == True:
+                    break
             event_list = pygame.event.get()
             for evento in event_list:
                 if evento.type == pygame.QUIT:
@@ -671,20 +721,18 @@ def janela_jogo(selecao):
             )
             if botao_voltar.draw(tela):
                 encerrar = True
-                cliente.encerrar = True
-                server.encerrar = True
-                server.socket.close()
+                server.encerrarConexao()
             if server.conectado == True:
-                loop_jogo("server")
+                encerrar = loop_jogo("server")
+                if encerrar == True:
+                    break
 
             # Atualização da tela
             pygame.display.update()
             for evento in pygame.event.get():
                 if evento.type == pygame.QUIT:
                     encerrar = True
-                    cliente.encerrar = True
-                    server.encerrar = True
-                    server.socket.close()
+                    server.encerrarConexao()
 
     if selecao == "servidor":
         hostear_jogo()
