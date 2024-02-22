@@ -2,8 +2,9 @@ import pygame
 
 
 class TextInputBox(pygame.sprite.Sprite):
-    def __init__(self, x, y, w, font):
+    def __init__(self, x, y, w, font, limiteCaracteres=42):
         super().__init__()
+        self.limiteCaracteres = limiteCaracteres
         self.color = (255, 255, 255)
         self.backcolor = (0, 0, 0)
         self.pos = (x, y)
@@ -37,5 +38,6 @@ class TextInputBox(pygame.sprite.Sprite):
                 elif event.key == pygame.K_BACKSPACE:
                     self.text = self.text[:-1]
                 else:
-                    self.text += event.unicode
+                    if len(self.text) < self.limiteCaracteres:
+                        self.text += event.unicode
                 self.render_text()

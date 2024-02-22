@@ -19,7 +19,6 @@ font_maior = pygame.font.SysFont("arialblack", 60)
 background = pygame.image.load("images/menu.jpg")
 desistir_img = pygame.image.load("images/botao_desistir.jpg")
 botao_desistir = button.Button(LARGURA - 100, 0, desistir_img, 0.5)
-textos = []
 
 
 def font_parametro(fonte, tamanho):
@@ -71,6 +70,8 @@ class Jogo:
         self.posicaoFinal = None
         self.estado_atual = "Jogando"
         self.socketAtual = None
+        global textos
+        textos = []
 
     def definir_socket(self, tipo):
         self.socketAtual = tipo
@@ -614,9 +615,6 @@ def gerar_menu():
                 break
         event_list = pygame.event.get()
         for event in event_list:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    failed = False
             if event.type == pygame.QUIT:
                 run = False
         pygame.display.update()
@@ -654,8 +652,8 @@ def janela_jogo(selecao):
 
     def entrar_jogo():
         encerrar = False
-        ip_input = textInput.TextInputBox(400, 500, 400, font)
-        port_input = textInput.TextInputBox(900, 500, 200, font)
+        ip_input = textInput.TextInputBox(250, 480, 400, font, 14)
+        port_input = textInput.TextInputBox(770, 480, 200, font, 7)
         group_ip = pygame.sprite.Group(ip_input)
         group_port = pygame.sprite.Group(port_input)
         while not encerrar:
@@ -669,7 +667,24 @@ def janela_jogo(selecao):
                 200,
                 380,
             )
+            draw_text(
+                tela,
+                "IP:",
+                font_parametro("calibri", 30),
+                preta,
+                200,
+                500,
+            )
+            draw_text(
+                tela,
+                "PORTA:",
+                font_parametro("calibri", 30),
+                preta,
+                670,
+                500,
+            )
             if botao_voltar.draw(tela):
+                cliente.encerrarConexao()
                 encerrar = True
             if botao_entrar.draw(tela):
                 start_cliente(ip_input.text, port_input.text)
