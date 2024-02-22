@@ -429,15 +429,21 @@ def criar_chat(textos, offset, event_list):
     PADDING = ALTURA - 115
     MARGIN = 50
     pygame.draw.rect(display, CINZA, (ALTURA, 120, LARGURA - ALTURA, ALTURA - 120))
+    cor = None
     for texto in reversed(textos):
         posicao = ALTURA
         if texto.__contains__("Você"):
             text_surface = font_parametro("calibri", 30).render(
                 texto, True, CINZA_CLARO
             )
-        else:
+        elif texto.__contains__("Oponente"):
             text_surface = font_parametro("calibri", 30).render(texto, True, PRETO)
-
+        else:
+            if textos[textos.index(texto) - 1].__contains__("Você"):
+                cor = CINZA_CLARO
+            else:
+                cor = PRETO
+            text_surface = font_parametro("calibri", 30).render(texto, True, cor)
         display.blit(text_surface, (posicao, offset + PADDING + MARGIN))
 
         MARGIN -= text_surface.get_height()
@@ -474,7 +480,7 @@ def loop_jogo(tipo):
     sair = False
     offset = 0
     textField = textInput.TextInputBox(
-        ALTURA, ALTURA - 30, LARGURA - ALTURA, font_parametro("calibri", 20)
+        ALTURA, ALTURA - 30, LARGURA - ALTURA, font_parametro("calibri", 20), 30
     )
     group_text = pygame.sprite.Group(textField)
     while not sair:
@@ -540,7 +546,12 @@ def receber_msg(conn):
                 cliente.encerrarConexao()
                 break
             if str(data.decode()).startswith("msg:"):
-                textos.append("Oponente: " + str(data.decode()).split("msg:", 1)[1])
+                mensagem = "Oponente: " + str(data.decode()).split("msg:", 1)[1]
+                if len(mensagem) > 27:
+                    textos.append(mensagem[:26])
+                    textos.append(mensagem[27:])
+                else:
+                    textos.append(mensagem)
             if str(data.decode()).startswith("jogada:"):
                 jogada = str(data.decode())
                 jogada = jogada.split("jogada:", 1)[1]
@@ -553,7 +564,7 @@ def receber_msg(conn):
                 jogo.estado_atual = "Desconectou"
         except Exception as e:
             print(f"Erro ao receber mensagem: {e}")
-            encerrar = True
+            server.encerrar = True
             break
 
 
@@ -562,7 +573,12 @@ def enviar_msg(conn, msg):
         conn.sendall((msg).encode())
     else:
         conn.sendall(("msg:" + msg).encode())
-        textos.append("Você: " + msg)
+        mensagem = "Você: " + msg
+        if len(mensagem) > 27:
+            textos.append(mensagem[:26])
+            textos.append(mensagem[27:])
+        else:
+            textos.append(mensagem)
 
 
 def pegar_porta_livre_tcp():
