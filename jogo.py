@@ -515,7 +515,7 @@ def loop_jogo(tipo):
 
         if botao_desistir.draw(display):
             jogo.estado_atual = "Desistiu"
-            if tipo == "servidor":
+            if tipo == "server":
                 server.enviar_mensagem("desistencia")
             else:
                 cliente.enviar_mensagem("desistencia")
@@ -532,7 +532,7 @@ def loop_jogo(tipo):
 
 
 def receber_msg(conn):
-    while not server.encerrar or not cliente.encerrar:
+    while not server.encerrar and not cliente.encerrar:
         try:
             data = conn.recv(1024)
             if not data:
@@ -573,6 +573,24 @@ def pegar_porta_livre_tcp():
     return port
 
 
+def tutorial():
+    tela = pygame.display.set_mode((LARGURA, ALTURA))
+    tutorial = pygame.image.load("images/tutorial.jpg")
+    voltar_img = pygame.image.load("images/botao_voltar.jpg")
+    botao_voltar = button.Button(10, 10, voltar_img, 1)
+    encerrar = False
+    while not encerrar:
+        tela.fill(BRANCO)
+        desenhar_background(tela, tutorial)
+        if botao_voltar.draw(tela):
+            encerrar = True
+        event_list = pygame.event.get()
+        for evento in event_list:
+            if evento.type == pygame.QUIT:
+                return True
+        pygame.display.update()
+
+
 def gerar_menu():
     pygame.init()
     larguraMenu, alturaMenu = 1200, 800
@@ -590,10 +608,12 @@ def gerar_menu():
     cliente_img = pygame.image.load("images/botao_cliente.jpg")
 
     sair_img = pygame.image.load("images/botao_sair.jpg")
+    tutorial_img = pygame.image.load("images/botao_tutorial.jpg")
 
-    botao_servidor = button.Button(490, 360, servidor_img, 1)
-    botao_cliente = button.Button(490, 470, cliente_img, 1)
-    botao_sair = button.Button(490, 580, sair_img, 1)
+    botao_servidor = button.Button(490, 340, servidor_img, 1)
+    botao_cliente = button.Button(490, 450, cliente_img, 1)
+    botao_tutorial = button.Button(490, 560, tutorial_img, 1)
+    botao_sair = button.Button(490, 670, sair_img, 1)
 
     run = True
     while run:
@@ -608,6 +628,10 @@ def gerar_menu():
                     break
             if botao_cliente.draw(telaMenu):
                 finish = janela_jogo("cliente")
+                if finish:
+                    break
+            if botao_tutorial.draw(telaMenu):
+                finish = tutorial()
                 if finish:
                     break
             if botao_sair.draw(telaMenu):
