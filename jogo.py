@@ -1,7 +1,5 @@
 # Configurações iniciais
 import pygame
-import button
-import textInput
 import socket
 import threading
 
@@ -17,8 +15,6 @@ font = pygame.font.SysFont("arialblack", 40)
 fontFina = pygame.font.SysFont("calibri", 40)
 font_maior = pygame.font.SysFont("arialblack", 60)
 background = pygame.image.load("images/menu.jpg")
-desistir_img = pygame.image.load("images/botao_desistir.jpg")
-botao_desistir = button.Button(LARGURA - 100, 0, desistir_img, 0.5)
 
 
 def font_parametro(fonte, tamanho):
@@ -33,6 +29,88 @@ COR_TABULEIRO_ESCURECIDO = (148, 74, 0)
 VERDE = (100, 225, 0)
 CINZA = (215, 215, 215)
 CINZA_CLARO = (100, 100, 100)
+
+
+class TextInputBox(pygame.sprite.Sprite):
+    def __init__(self, x, y, w, font, limiteCaracteres=42):
+        super().__init__()
+        self.limiteCaracteres = limiteCaracteres
+        self.color = (255, 255, 255)
+        self.backcolor = (0, 0, 0)
+        self.pos = (x, y)
+        self.width = w
+        self.font = font
+        self.active = False
+        self.text = ""
+        self.render_text()
+
+    def render_text(self):
+        t_surf = self.font.render(self.text, True, self.color, self.backcolor)
+        self.image = pygame.Surface(
+            (max(self.width, t_surf.get_width() + 10), t_surf.get_height() + 10),
+            pygame.SRCALPHA,
+        )
+        if self.backcolor:
+            self.image.fill(self.backcolor)
+        self.image.blit(t_surf, (5, 5))
+        pygame.draw.rect(
+            self.image, self.color, self.image.get_rect().inflate(-2, -2), 2
+        )
+        self.rect = self.image.get_rect(topleft=self.pos)
+
+    def update(self, event_list):
+        for event in event_list:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self.active = self.rect.collidepoint(event.pos)
+            if event.type == pygame.KEYDOWN and self.active:
+                if event.key == pygame.K_RETURN:
+                    self.active = False
+                elif event.key == pygame.K_BACKSPACE:
+                    self.text = self.text[:-1]
+                else:
+                    if len(self.text) < self.limiteCaracteres:
+                        self.text += event.unicode
+                self.render_text()
+
+
+class Button:
+    def __init__(self, x, y, image, scale):
+        width = image.get_width()
+        height = image.get_height()
+        self.image = pygame.transform.scale(
+            image, (int(width * scale), int(height * scale))
+        )
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+        self.clicked = False
+        self.cursor_changed = False  # Variável para controlar a alteração do cursor
+
+    def draw(self, surface):
+        action = False
+        if self.is_hovered():
+            if not self.cursor_changed:  # Verifica se o cursor já foi alterado
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+                self.cursor_changed = True  # Marca que o cursor foi alterado
+            if pygame.mouse.get_pressed()[0] == 1 and not self.clicked:
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                self.clicked = True
+                action = True
+        else:
+            if (
+                self.cursor_changed
+            ):  # Se o cursor foi alterado antes e saiu do botão, restaura o cursor padrão
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                self.cursor_changed = False  # Marca que o cursor foi restaurado
+
+        if pygame.mouse.get_pressed()[0] == 0:
+            self.clicked = False
+
+        surface.blit(self.image, (self.rect.x, self.rect.y))
+
+        return action
+
+    def is_hovered(self):
+        return self.rect.collidepoint(pygame.mouse.get_pos())
 
 
 def desenhar_background(tela, image):
@@ -287,7 +365,7 @@ class Cliente:
         self.conectado = False
         self.connection = None
         self.error = False
-        self.encerrar = False
+        self.encerrar = None
 
     def run(self, ip, porta):
         try:
@@ -304,11 +382,11 @@ class Cliente:
         except ConnectionRefusedError:
             print("A conexão foi recusada pelo servidor.")
             self.conectado = False
-            self.error = True
+            self.error = "A conexão foi recusada pelo servidor."
         except Exception as e:
             print(f"Erro ao conectar: {e}")
             self.conectado = False
-            self.error = True
+            self.error = "Não foi possível acessar a sala indicada"
 
     def encerrarConexao(self):
         self.encerrar = True
@@ -463,8 +541,8 @@ def botoes_chat(offset):
     botao_subir_img = pygame.image.load("images/button_up.jpg")
     botao_descer_img = pygame.image.load("images/button_down.jpg")
 
-    botao_subir_chat = button.Button(LARGURA - 20, 120, botao_subir_img, 1)
-    botao_descer_chat = button.Button(LARGURA - 20, 140, botao_descer_img, 1)
+    botao_subir_chat = Button(LARGURA - 20, 120, botao_subir_img, 1)
+    botao_descer_chat = Button(LARGURA - 20, 140, botao_descer_img, 1)
     pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
     if botao_subir_chat.draw(display):
         offset += 5
@@ -479,10 +557,12 @@ def loop_jogo(tipo):
     jogo.definir_socket(tipo)
     sair = False
     offset = 0
-    textField = textInput.TextInputBox(
+    textField = TextInputBox(
         ALTURA, ALTURA - 30, LARGURA - ALTURA, font_parametro("calibri", 20), 30
     )
     group_text = pygame.sprite.Group(textField)
+    desistir_img = pygame.image.load("images/botao_desistir.jpg")
+    botao_desistir = Button(LARGURA - 100, 0, desistir_img, 0.5)
     while not sair:
         event_list = pygame.event.get()
         for evento in event_list:
@@ -593,7 +673,7 @@ def tutorial():
     tela = pygame.display.set_mode((LARGURA, ALTURA))
     tutorial = pygame.image.load("images/tutorial.jpg")
     voltar_img = pygame.image.load("images/botao_voltar.jpg")
-    botao_voltar = button.Button(10, 10, voltar_img, 1)
+    botao_voltar = Button(10, 10, voltar_img, 1)
     encerrar = False
     while not encerrar:
         tela.fill(BRANCO)
@@ -609,15 +689,11 @@ def tutorial():
 
 def gerar_menu():
     pygame.init()
-    larguraMenu, alturaMenu = 1200, 800
-    telaMenu = pygame.display.set_mode((larguraMenu, alturaMenu))
-    clock = pygame.time.Clock()
+    telaMenu = pygame.display.set_mode((LARGURA, ALTURA))
     pygame.display.set_caption("Menu")
 
     # variaveis
     finish = False
-
-    background = pygame.image.load("images/menu.jpg")
 
     servidor_img = pygame.image.load("images/botao_servidor.jpg")
 
@@ -626,10 +702,10 @@ def gerar_menu():
     sair_img = pygame.image.load("images/botao_sair.jpg")
     tutorial_img = pygame.image.load("images/botao_tutorial.jpg")
 
-    botao_servidor = button.Button(490, 340, servidor_img, 1)
-    botao_cliente = button.Button(490, 450, cliente_img, 1)
-    botao_tutorial = button.Button(490, 560, tutorial_img, 1)
-    botao_sair = button.Button(490, 670, sair_img, 1)
+    botao_servidor = Button(490, 340, servidor_img, 1)
+    botao_cliente = Button(490, 450, cliente_img, 1)
+    botao_tutorial = Button(490, 560, tutorial_img, 1)
+    botao_sair = Button(490, 670, sair_img, 1)
 
     run = True
     while run:
@@ -653,6 +729,14 @@ def gerar_menu():
             if botao_sair.draw(telaMenu):
                 run = False
                 break
+            draw_text(
+                display,
+                "Créditos: Mateus Machado Costa",
+                font_parametro("arial", 20),
+                COR_TABULEIRO,
+                0,
+                ALTURA - 30,
+            )
         event_list = pygame.event.get()
         for event in event_list:
             if event.type == pygame.QUIT:
@@ -666,21 +750,15 @@ def janela_jogo(selecao):
     pygame.display.set_caption("Jogo Resta Um")
     largura, altura = 1200, 800
     tela = pygame.display.set_mode((largura, altura))
-    font = pygame.font.SysFont("arialblack", 40)
-    background = pygame.image.load("images/menu.jpg")
     voltar_img = pygame.image.load("images/botao_voltar.jpg")
     cliente_img = pygame.image.load("images/botao_cliente.jpg")
-    botao_voltar = button.Button(10, 10, voltar_img, 1)
-    botao_entrar = button.Button(500, 600, cliente_img, 1)
+    botao_voltar = Button(10, 10, voltar_img, 1)
+    botao_entrar = Button(500, 600, cliente_img, 1)
 
     global server
     global cliente
     server = Server()
     cliente = Cliente()
-
-    # Cores - RGB
-    preta = (0, 0, 0)
-    branca = (255, 255, 255)
 
     def start_server(ip, porta):
         t_server = threading.Thread(target=server.run, args=(ip, porta), daemon=True)
@@ -690,20 +768,62 @@ def janela_jogo(selecao):
         t_cliente = threading.Thread(target=cliente.run, args=(ip, porta), daemon=True)
         t_cliente.start()
 
+    def erro_conexao():
+        sair = False
+        while not sair:
+            for evento in pygame.event.get():
+                if evento.type == pygame.QUIT:
+                    sair = True
+                    pygame.quit()
+                if evento.type == pygame.KEYDOWN:
+                    if evento.key == pygame.K_SPACE:
+                        sair = True
+                        cliente.error = None
+
+            display.fill(BRANCO)
+            desenhar_background(display, background)
+            draw_text(
+                display,
+                "Erro ao conectar!",
+                font,
+                PRETO,
+                400,
+                300,
+            )
+            draw_text(
+                display,
+                str(cliente.error),
+                font,
+                COR_TABULEIRO,
+                180,
+                400,
+            )
+
+            draw_text(
+                display,
+                "Aperte ESPAÇO para voltar para o início",
+                font,
+                PRETO,
+                180,
+                700,
+            )
+            pygame.display.update()
+            clock.tick(60)
+
     def entrar_jogo():
         encerrar = False
-        ip_input = textInput.TextInputBox(250, 480, 400, font, 14)
-        port_input = textInput.TextInputBox(770, 480, 200, font, 7)
+        ip_input = TextInputBox(250, 480, 400, font, 14)
+        port_input = TextInputBox(770, 480, 200, font, 7)
         group_ip = pygame.sprite.Group(ip_input)
         group_port = pygame.sprite.Group(port_input)
         while not encerrar:
-            tela.fill(branca)
+            tela.fill(BRANCO)
             desenhar_background(tela, background)
             draw_text(
                 tela,
                 "Digite o endereço e porta do servidor",
                 font,
-                preta,
+                PRETO,
                 200,
                 380,
             )
@@ -711,7 +831,7 @@ def janela_jogo(selecao):
                 tela,
                 "IP:",
                 font_parametro("calibri", 30),
-                preta,
+                PRETO,
                 200,
                 500,
             )
@@ -719,7 +839,7 @@ def janela_jogo(selecao):
                 tela,
                 "PORTA:",
                 font_parametro("calibri", 30),
-                preta,
+                PRETO,
                 670,
                 500,
             )
@@ -732,6 +852,8 @@ def janela_jogo(selecao):
                 encerrar = loop_jogo("cliente")
                 if encerrar == True:
                     break
+            if cliente.error:
+                erro_conexao()
             event_list = pygame.event.get()
             for evento in event_list:
                 if evento.type == pygame.QUIT:
@@ -750,13 +872,13 @@ def janela_jogo(selecao):
         ip = socket.gethostbyname(hostname)
         start_server(ip, porta)
         while not encerrar:
-            tela.fill(branca)
+            tela.fill(BRANCO)
             desenhar_background(tela, background)
             draw_text(
                 tela,
                 "Aguarde o jogador se conectar...",
                 font,
-                preta,
+                PRETO,
                 260,
                 380,
             )
@@ -764,7 +886,7 @@ def janela_jogo(selecao):
                 tela,
                 f"Seu IP: {ip} : {porta}",
                 font,
-                preta,
+                PRETO,
                 300,
                 450,
             )
