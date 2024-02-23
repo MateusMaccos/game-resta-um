@@ -15,6 +15,9 @@ font = pygame.font.SysFont("arialblack", 40)
 fontFina = pygame.font.SysFont("calibri", 40)
 font_maior = pygame.font.SysFont("arialblack", 60)
 background = pygame.image.load("images/menu.jpg")
+programIcon = pygame.image.load("images/icone.png")
+
+pygame.display.set_icon(programIcon)
 
 
 def font_parametro(fonte, tamanho):
