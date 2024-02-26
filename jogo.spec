@@ -5,7 +5,7 @@ a = Analysis(
     ['jogo.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('images/*', 'images/')],
     hiddenimports=['babel.numbers'],
     hookspath=[],
     hooksconfig={},

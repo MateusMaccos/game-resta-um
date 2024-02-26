@@ -409,6 +409,8 @@ def coluna_clicada(pos):
     for i in range(1, 7):
         if x < i * (ALTURA) / 7:
             return i - 1
+    if x > ALTURA:
+        return -1
     return 6
 
 
@@ -417,6 +419,8 @@ def linha_clicada(pos):
     for i in range(1, 7):
         if y < i * (ALTURA) / 7:
             return i - 1
+    if y > ALTURA:
+        return -1
     return 6
 
 
