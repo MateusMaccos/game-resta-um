@@ -429,8 +429,10 @@ def tela_fim_jogo(fim):
     while not sair:
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
+                server.encerrar = True
+                cliente.encerrar = True
                 sair = True
-                pygame.quit()
+                return True
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_SPACE:
                     server.encerrar = True
@@ -510,7 +512,7 @@ def tela_fim_jogo(fim):
         clock.tick(60)
 
 
-def criar_chat(textos, offset, event_list):
+def criar_chat(textos, offset):
     PADDING = ALTURA - 115
     MARGIN = 50
     pygame.draw.rect(display, CINZA, (ALTURA, 120, LARGURA - ALTURA, ALTURA - 120))
@@ -600,7 +602,7 @@ def loop_jogo(tipo):
             break
         display.fill(BRANCO)
         jogo.desenha_tabuleiro()
-        criar_chat(textos, offset, event_list)
+        criar_chat(textos, offset)
         offset = botoes_chat(offset)
         jogo.desenha_menu()
         textField.update(event_list)
@@ -781,7 +783,7 @@ def janela_jogo(selecao):
             for evento in pygame.event.get():
                 if evento.type == pygame.QUIT:
                     sair = True
-                    pygame.quit()
+                    return True
                 if evento.type == pygame.KEYDOWN:
                     if evento.key == pygame.K_SPACE:
                         sair = True
@@ -860,7 +862,7 @@ def janela_jogo(selecao):
                 if encerrar == True:
                     break
             if cliente.error:
-                erro_conexao()
+                encerrar = erro_conexao()
             event_list = pygame.event.get()
             for evento in event_list:
                 if evento.type == pygame.QUIT:
