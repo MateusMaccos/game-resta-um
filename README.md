@@ -2,10 +2,9 @@
 ⚪<br>Game Resta Um
 </h1>
 
+<img align="center" src="/images/restaum.gif">
+
 ## 📚 Resumo
-
-<img src="/images/restaum.gif">
-
 > Resta um é um quebra-cabeça no qual o objetivo é, por meio de movimentos válidos, deixar apenas uma peça no tabuleiro. No início do jogo, há 32 peças no tabuleiro, deixando vazia a posição central. Um movimento consiste em pegar uma peça e fazê-la "saltar" sobre outra peça, sempre na horizontal ou na vertical, terminando em um espaço vazio. A peça que foi "saltada" é retirada do tabuleiro. O jogo termina quando não é mais possível fazer nenhum outro movimento. Nesta ocasião, o jogador ganha se restar apenas uma peça no tabuleiro.
 
 - Aplicativo responsivo para Desktop <img align="center" alt="Android" height="30" width="80" src="https://github.com/MateusMaccos/SnakeGame/blob/main/images/pygame_logo.png">
