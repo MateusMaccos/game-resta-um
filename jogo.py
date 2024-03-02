@@ -137,7 +137,17 @@ def draw_text(tela, text, font, text_col, x, y):
 
 class Jogo:
     def __init__(self):
-        self.tabuleiro = tabuleiroInicial
+        self.tabuleiro = [linha[:] for linha in tabuleiroInicial]
+        # Tabuleiro para testar vencer
+        # self.tabuleiro = [
+        #     [-1, -1, 0, 0, 0, -1, -1],
+        #     [-1, -1, 0, 0, 0, -1, -1],
+        #     [1, 1, 0, 0, 0, 0, 0],
+        #     [0, 0, 0, 0, 0, 1, 1],
+        #     [0, 0, 0, 1, 1, 0, 0],
+        #     [-1, -1, 0, 0, 0, -1, -1],
+        #     [-1, -1, 0, 0, 0, -1, -1],
+        # ]
         self.seu_turno = True
         self.posicaoInicial = None
         self.posicaoFinal = None
@@ -147,7 +157,7 @@ class Jogo:
         textos = []
 
     def resetar_jogo_atual(self):
-        self.tabuleiro = tabuleiroInicial
+        self.tabuleiro = [linha[:] for linha in tabuleiroInicial]
         self.seu_turno = True
         self.posicaoInicial = None
         self.posicaoFinal = None
@@ -474,14 +484,14 @@ def tela_fim_jogo():
             480,
             300,
         )
-        if jogo.estado_atual in ["Empate", "Fim", "Reiniciar"]:
+        if jogo.estado_atual == "Jogando":
+            return False
+        if jogo.estado_atual == "Reiniciar":
+            jogo.resetar_jogo_atual()
+        if jogo.estado_atual in ["Empate", "Fim"]:
             if botao_reiniciar.draw(display):
                 jogo.resetar_jogo_atual()
                 jogo.resetar_jogo_adversario()
-                return False
-            if jogo.estado_atual == "Reiniciar":
-                jogo.resetar_jogo_atual()
-                return False
         if jogo.estado_atual == "Empate":
             draw_text(
                 display,
@@ -542,6 +552,7 @@ def tela_fim_jogo():
         )
         pygame.display.update()
         clock.tick(60)
+    return False
 
 
 def criar_chat(textos, offset):
@@ -604,6 +615,7 @@ def loop_jogo(tipo):
     group_text = pygame.sprite.Group(textField)
     desistir_img = pygame.image.load("images/botao_desistir.jpg")
     botao_desistir = Button(LARGURA - 100, 0, desistir_img, 0.5)
+    print("Saiu do jogo")
     while not sair:
         event_list = pygame.event.get()
         for evento in event_list:
@@ -646,7 +658,6 @@ def loop_jogo(tipo):
                 server.enviar_mensagem("desistencia")
             else:
                 cliente.enviar_mensagem("desistencia")
-
         jogo.verifica_fim_jogo()
         if jogo.estado_atual != "Jogando":
             encerrar = tela_fim_jogo()
