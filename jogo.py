@@ -680,7 +680,7 @@ def receber_msg(conn):
             if str(data.decode()).startswith("msg:"):
                 mensagem = "Oponente: " + str(data.decode()).split("msg:", 1)[1]
                 if len(mensagem) > 27:
-                    textos.append(mensagem[:26])
+                    textos.append(mensagem[:27])
                     textos.append(mensagem[27:])
                 else:
                     textos.append(mensagem)
@@ -714,7 +714,7 @@ def enviar_msg(conn, msg):
         conn.sendall(("msg:" + msg).encode())
         mensagem = "Você: " + msg
         if len(mensagem) > 27:
-            textos.append(mensagem[:26])
+            textos.append(mensagem[:27])
             textos.append(mensagem[27:])
         else:
             textos.append(mensagem)
