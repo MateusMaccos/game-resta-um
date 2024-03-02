@@ -4,6 +4,8 @@
 
 ## 📚 Resumo
 
+<img src="/images/restaum.gif">
+
 > Resta um é um quebra-cabeça no qual o objetivo é, por meio de movimentos válidos, deixar apenas uma peça no tabuleiro. No início do jogo, há 32 peças no tabuleiro, deixando vazia a posição central. Um movimento consiste em pegar uma peça e fazê-la "saltar" sobre outra peça, sempre na horizontal ou na vertical, terminando em um espaço vazio. A peça que foi "saltada" é retirada do tabuleiro. O jogo termina quando não é mais possível fazer nenhum outro movimento. Nesta ocasião, o jogador ganha se restar apenas uma peça no tabuleiro.
 
 - Aplicativo responsivo para Desktop <img align="center" alt="Android" height="30" width="80" src="https://github.com/MateusMaccos/SnakeGame/blob/main/images/pygame_logo.png">
@@ -27,17 +29,4 @@ Opção de Reinício: Após o término do jogo, os jogadores têm a opção de r
 <img align="center" alt="Python" height="30" width="30" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/935px-Python-logo-notext.svg.png"> É uma linguagem de programação de alto nível, interpretada e de propósito geral. Ela foi criada por Guido van Rossum e lançada pela primeira vez em 1991. Python possui uma sintaxe simples e legível, o que a torna uma linguagem muito popular entre desenvolvedores de todos os níveis de experiência.
 
 ---
-
-## Imagens do Aplicativo:
-
-### Tela mostrando a tela inicial
-
-
-### Tela mostrando o início do jogo
-
-
-### Tela mostrando o alimento e o acelerador de velocidade
-
-
-### Tela quando você perde
 
