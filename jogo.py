@@ -16,6 +16,15 @@ fontFina = pygame.font.SysFont("calibri", 40)
 font_maior = pygame.font.SysFont("arialblack", 60)
 background = pygame.image.load("images/menu.jpg")
 programIcon = pygame.image.load("images/icone.png")
+tabuleiroInicial = [
+    [-1, -1, 1, 1, 1, -1, -1],
+    [-1, -1, 1, 1, 1, -1, -1],
+    [1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 0, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1],
+    [-1, -1, 1, 1, 1, -1, -1],
+    [-1, -1, 1, 1, 1, -1, -1],
+]
 
 pygame.display.set_icon(programIcon)
 
@@ -128,24 +137,7 @@ def draw_text(tela, text, font, text_col, x, y):
 
 class Jogo:
     def __init__(self):
-        # self.tabuleiro = [
-        #     [-1, -1, 0, 0, 0, -1, -1],
-        #     [-1, -1, 0, 0, 0, -1, -1],
-        #     [0, 0, 0, 0, 0, 0, 0],
-        #     [0, 0, 0, 0, 0, 0, 0],
-        #     [0, 0, 0, 0, 0, 1, 1],
-        #     [-1, -1, 0, 0, 0, -1, -1],
-        #     [-1, -1, 0, 0, 0, -1, -1],
-        # ]
-        self.tabuleiro = [
-            [-1, -1, 1, 1, 1, -1, -1],
-            [-1, -1, 1, 1, 1, -1, -1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 0, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [-1, -1, 1, 1, 1, -1, -1],
-            [-1, -1, 1, 1, 1, -1, -1],
-        ]
+        self.tabuleiro = tabuleiroInicial
         self.seu_turno = True
         self.posicaoInicial = None
         self.posicaoFinal = None
@@ -153,6 +145,24 @@ class Jogo:
         self.socketAtual = None
         global textos
         textos = []
+
+    def resetar_jogo_atual(self):
+        self.tabuleiro = tabuleiroInicial
+        self.seu_turno = True
+        self.posicaoInicial = None
+        self.posicaoFinal = None
+        self.estado_atual = "Jogando"
+        textos.clear()
+        if self.socketAtual == "cliente":
+            self.seu_turno = False
+        else:
+            self.seu_turno = True
+
+    def resetar_jogo_adversario(self):
+        if self.socketAtual == "cliente":
+            cliente.enviar_mensagem("reiniciar")
+        else:
+            server.enviar_mensagem("reiniciar")
 
     def definir_socket(self, tipo):
         self.socketAtual = tipo
@@ -305,11 +315,9 @@ class Jogo:
     def verifica_fim_jogo(self):
         somador = sum([contador.count(1) for contador in self.tabuleiro])
         if somador == 1:
-            return "Fim"
-        if not self.existe_mov_possivel():
-            return "Empate"
-        if jogo.estado_atual in ["Desistencia", "Desistiu", "Desconectou"]:
-            return jogo.estado_atual
+            jogo.estado_atual = "Fim"
+        elif not self.existe_mov_possivel():
+            jogo.estado_atual = "Empate"
 
     def existe_mov_possivel(self):
         for l in range(len(self.tabuleiro)):
@@ -424,20 +432,36 @@ def linha_clicada(pos):
     return 6
 
 
-def tela_fim_jogo(fim):
+def tela_fim_jogo():
     sair = False
+    reiniciar_img = pygame.image.load("images/botao_reiniciar.jpg")
+    botao_reiniciar = Button(510, 550, reiniciar_img, 1)
     while not sair:
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
-                server.encerrar = True
-                cliente.encerrar = True
                 sair = True
+                if jogo.estado_atual != "Desconectou":
+                    if jogo.socketAtual == "cliente":
+                        cliente.encerrar = True
+                        cliente.enviar_mensagem("desconectou")
+                        cliente.encerrarConexao()
+                    else:
+                        server.encerrar = True
+                        server.enviar_mensagem("desconectou")
+                        server.encerrarConexao()
                 return True
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_SPACE:
-                    server.encerrar = True
-                    cliente.encerrar = True
                     sair = True
+                    if jogo.estado_atual != "Desconectou":
+                        if jogo.socketAtual == "cliente":
+                            cliente.encerrar = True
+                            cliente.enviar_mensagem("desconectou")
+                            cliente.encerrarConexao()
+                        else:
+                            server.encerrar = True
+                            server.enviar_mensagem("desconectou")
+                            server.encerrarConexao()
                     return True
 
         display.fill(BRANCO)
@@ -450,7 +474,15 @@ def tela_fim_jogo(fim):
             480,
             300,
         )
-        if fim == "Empate":
+        if jogo.estado_atual in ["Empate", "Fim", "Reiniciar"]:
+            if botao_reiniciar.draw(display):
+                jogo.resetar_jogo_atual()
+                jogo.resetar_jogo_adversario()
+                return False
+            if jogo.estado_atual == "Reiniciar":
+                jogo.resetar_jogo_atual()
+                return False
+        if jogo.estado_atual == "Empate":
             draw_text(
                 display,
                 "Empate",
@@ -459,7 +491,7 @@ def tela_fim_jogo(fim):
                 480,
                 400,
             )
-        elif fim == "Fim":
+        elif jogo.estado_atual == "Fim":
             if not jogo.seu_turno:
                 mensagem = "Você"
                 distancia = 400
@@ -474,7 +506,7 @@ def tela_fim_jogo(fim):
                 distancia,
                 400,
             )
-        elif fim in ["Desistencia", "Desistiu"]:
+        elif jogo.estado_atual in ["Desistencia", "Desistiu"]:
             if jogo.estado_atual == "Desistiu":
                 mensagem = "Você desistiu!"
                 distancia = 400
@@ -489,9 +521,9 @@ def tela_fim_jogo(fim):
                 distancia,
                 400,
             )
-        elif fim == "Desconectou":
+        elif jogo.estado_atual == "Desconectou":
             mensagem = "Seu oponente desconectou!"
-            distancia = 250
+            distancia = 200
             draw_text(
                 display,
                 f"{mensagem}",
@@ -615,11 +647,11 @@ def loop_jogo(tipo):
             else:
                 cliente.enviar_mensagem("desistencia")
 
-        fim_jogo = jogo.verifica_fim_jogo()
-        if fim_jogo is not None:
-            sair = True
-            encerrar = tela_fim_jogo(fim_jogo)
+        jogo.verifica_fim_jogo()
+        if jogo.estado_atual != "Jogando":
+            encerrar = tela_fim_jogo()
             if encerrar:
+                sair = True
                 return True
 
         pygame.display.update()
@@ -651,6 +683,8 @@ def receber_msg(conn):
                 jogo.estado_atual = "Desistencia"
             if str(data.decode()) == "desconectou":
                 jogo.estado_atual = "Desconectou"
+            if str(data.decode()) == "reiniciar":
+                jogo.estado_atual = "Reiniciar"
         except Exception as e:
             print(f"Erro ao receber mensagem: {e}")
             server.encerrar = True
@@ -658,7 +692,12 @@ def receber_msg(conn):
 
 
 def enviar_msg(conn, msg):
-    if msg.startswith("jogada:") or msg == "desistencia" or msg == "desconectou":
+    if (
+        msg.startswith("jogada:")
+        or msg == "desistencia"
+        or msg == "desconectou"
+        or msg == "reiniciar"
+    ):
         conn.sendall((msg).encode())
     else:
         conn.sendall(("msg:" + msg).encode())
@@ -757,8 +796,7 @@ def gerar_menu():
 def janela_jogo(selecao):
     pygame.init()
     pygame.display.set_caption("Jogo Resta Um")
-    largura, altura = 1200, 800
-    tela = pygame.display.set_mode((largura, altura))
+    tela = pygame.display.set_mode((LARGURA, ALTURA))
     voltar_img = pygame.image.load("images/botao_voltar.jpg")
     cliente_img = pygame.image.load("images/botao_cliente.jpg")
     botao_voltar = Button(10, 10, voltar_img, 1)
