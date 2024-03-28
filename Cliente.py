@@ -18,15 +18,6 @@ fontFina = pygame.font.SysFont("calibri", 40)
 font_maior = pygame.font.SysFont("arialblack", 60)
 background = pygame.image.load("images/menu.jpg")
 programIcon = pygame.image.load("images/icone.png")
-tabuleiroInicial = [
-    [-1, -1, 1, 1, 1, -1, -1],
-    [-1, -1, 1, 1, 1, -1, -1],
-    [1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 0, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1],
-    [-1, -1, 1, 1, 1, -1, -1],
-    [-1, -1, 1, 1, 1, -1, -1],
-]
 
 class ServidorNomes:
     def iniciar_servidor_nomes(self):
@@ -150,7 +141,6 @@ class Cliente:
         self.id=None
         self.conectado = False
         self.error = False
-        self.encerrar = None
         self.jogo = None
         self.posicaoInicial=None
         self.posicaoFinal=None
@@ -168,17 +158,6 @@ class Cliente:
                 else:
                     self.jogo.registrar_jogador("Jogador2")
                     self.id="Jogador2"
-                print(self.id)
-                tabuleiro=self.jogo.pegar_tabuleiro()
-                print(tabuleiro)
-                # while(True):
-                #     X = input("Digite a posicao inicial X: ").strip()
-                #     Y = input("Digite a posicao inicial Y: ").strip()
-                #     X2 = input("Digite a posicao final X: ").strip()
-                #     Y2 = input("Digite a posicao final Y: ").strip()
-                #     self.jogo.moverPeca([X,Y],[X2,Y2])
-                #     tabuleiro=self.jogo.pegar_tabuleiro()
-                #     print(tabuleiro)
         except ConnectionRefusedError:
             print("A conexão foi recusada pelo servidor.")
             self.conectado = False
@@ -209,13 +188,19 @@ class Cliente:
     def verifica_fim_jogo(self):
         return self.jogo.verifica_fim_jogo()
     
+    def desistiu(self):
+        return self.jogo.desistiu(self.id)
+    
+    def resetar(self):
+        return self.jogo.resetar_jogo()
+    
     def avalia_posicao_clicada(self, coordenada):
         linha, coluna = linha_clicada(coordenada), coluna_clicada(coordenada)
         if self.posicaoInicial == None:
             if self.tabuleiro[linha][coluna] == 1:
                 self.posicaoInicial = [linha, coluna]
         else:
-            movimentos = self.posicoesPossiveis(
+            movimentos = self.jogo.posicoesPossiveis(
                 self.posicaoInicial[0], self.posicaoInicial[1]
             )
             if [linha, coluna] in movimentos:
@@ -258,7 +243,7 @@ class Cliente:
                             COR_TABULEIRO_ESCURECIDO,
                             (x, y, tamanho_quadrado, tamanho_quadrado),
                         )
-                    if [l, c] in self.posicoesPossiveis(
+                    if [l, c] in self.jogo.posicoesPossiveis(
                         self.posicaoInicial[0], self.posicaoInicial[1]
                     ):
                         pygame.draw.rect(
@@ -267,6 +252,7 @@ class Cliente:
                 x += tamanho_quadrado
             y += tamanho_quadrado
 
+        self.tabuleiro = [linha[:] for linha in self.jogo.pegar_tabuleiro()]
         for l in range(len(self.tabuleiro)):
             for c in range(len(self.tabuleiro[l])):
                 x = ALTURA / 7 * c + ALTURA / 14
@@ -275,7 +261,7 @@ class Cliente:
                     pygame.draw.circle(display, BRANCO, (x, y), raio_circulo, 0)
 
     def desenha_menu(self):
-        if self.seu_turno:
+        if self.seu_turno():
             jogada = "Você"
         else:
             jogada = "Seu oponente"
@@ -297,7 +283,6 @@ class Cliente:
         )
 
     def encerrarConexao(self):
-        self.encerrar = True
         self.jogo.desconectou(self.id)
         # try:
         #     self.jogo.shutdown()
@@ -333,13 +318,13 @@ def tela_fim_jogo():
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 sair = True
-                if cliente.estado_atual != "Desconectou":
+                if cliente.estado_atual() != "Desconectou":
                     cliente.encerrarConexao()
                 return True
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_SPACE:
                     sair = True
-                    if cliente.estado_atual != "Desconectou":
+                    if cliente.estado_atual() != "Desconectou":
                         cliente.encerrarConexao()
                     return True
 
@@ -370,11 +355,9 @@ def tela_fim_jogo():
         )
         if cliente.estado_atual() == "Jogando":
             return False
-        if cliente.estado_atual() == "Reiniciar":
-            cliente.resetar_jogo()
         if cliente.estado_atual() in ["Empate", "Fim"]:
             if botao_reiniciar.draw(display):
-                cliente.resetar_jogo()
+                cliente.resetar()
         if cliente.estado_atual() == "Empate":
             draw_text(
                 display,
@@ -385,7 +368,7 @@ def tela_fim_jogo():
                 400,
             )
         elif cliente.estado_atual() == "Fim":
-            if not cliente.seu_turno:
+            if not cliente.seu_turno():
                 mensagem = "Você"
                 distancia = 400
             else:
@@ -399,8 +382,8 @@ def tela_fim_jogo():
                 distancia,
                 400,
             )
-        elif cliente.estado_atual() in ["Desistencia", "Desistiu"]:
-            if cliente.estado_atual() == "Desistiu":
+        elif cliente.estado_atual()=="Desistencia":
+            if cliente.seu_turno():
                 mensagem = "Você desistiu!"
                 distancia = 400
             else:
@@ -525,9 +508,9 @@ def loop_jogo():
         group_text.draw(display)
 
         if botao_desistir.draw(display):
-            cliente.mudar_estado_atual("Desistiu")
+            cliente.desistiu()
         cliente.verifica_fim_jogo()
-        if cliente.estado_atual != "Jogando":
+        if cliente.estado_atual() != "Jogando":
             encerrar = tela_fim_jogo()
             if encerrar:
                 sair = True
@@ -686,7 +669,6 @@ def janela_jogo(selecao):
                 380,
             )
             if botao_voltar.draw(tela):
-                cliente.encerrarConexao()
                 encerrar = True
             if botao_entrar.draw(tela):
                 start_cliente(proxy_input.text)
