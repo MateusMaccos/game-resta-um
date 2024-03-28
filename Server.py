@@ -12,6 +12,7 @@ tabuleiroInicial = [
 ]
 
 @Pyro4.expose
+@Pyro4.behavior(instance_mode='single')
 class Jogo(object):
     def __init__(self):
         self.tabuleiro = [linha[:] for linha in tabuleiroInicial]
@@ -26,32 +27,51 @@ class Jogo(object):
         #     [-1, -1, 0, 0, 0, -1, -1],
         # ]
         self.jogadores = []
-        self.estado_atual = "Jogando"
+        self.estado_atual = "Esperando"
         self.turno_atual = None
-        global textos
-        textos = []
+        self.textos = []
+    
+    def pegar_adversario(self,id):
+        if id == 'Jogador1':
+            return 'Jogador2'
+        else:
+            return 'Jogador1'
     
     def pegar_estado_atual(self):
         return self.estado_atual
+    
+    def pegar_qntd_jogadores(self):
+        return len(self.jogadores)
 
     def pegar_turno(self):
         return self.turno_atual
     
     def mudar_estado_atual(self,valor):
         self.estado_atual = valor
+
+    def desconectou(self,id):
+        self.jogadores.remove(id)
     
     def pegar_tabuleiro(self):
         return self.tabuleiro
+    
+    def pegar_chat(self):
+        return self.textos
+    
+    def registrar_msg(self,id,msg):
+        self.textos.append(id+":"+msg)
 
     def resetar_jogo_atual(self):
         self.tabuleiro = [linha[:] for linha in tabuleiroInicial]
         self.estado_atual = "Jogando"
-        textos.clear()
+        self.textos.clear()
 
     def registrar_jogador(self, id):
-        if(len(self.jogadores)==[]):
+        if self.jogadores==[]:
             self.turno_atual=id
         self.jogadores.append(id)
+        if len(self.jogadores)==2:
+            self.estado_atual=="Jogando"
 
     def posicoesPossiveis(self, X, Y):
         posicoesPossiveis = []
