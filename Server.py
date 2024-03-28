@@ -151,10 +151,12 @@ class Jogo(object):
                     return True
         return False
 
-daemon = Pyro4.Daemon()                # make a Pyro daemon
-ns = Pyro4.locateNS()                  # find the name server
-uri = daemon.register(Jogo)   # register the greeting maker as a Pyro object
-ns.register("nome-server", uri)   # register the object with a name in the name server
-
-print("Ready.")
-daemon.requestLoop()                   # start the event loop of the server to wait for calls
+def iniciar(nome):
+    daemon = Pyro4.Daemon()   
+    try:
+        ns = Pyro4.locateNS()                  
+        uri = daemon.register(Jogo)   
+        ns.register(nome, uri) 
+        daemon.requestLoop()
+    except Exception as e:
+        print(e)
