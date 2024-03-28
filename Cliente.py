@@ -1,5 +1,6 @@
 # saved as greeting-client.py
 import Pyro4
+import Pyro4.naming
 import pygame
 import socket
 import threading
@@ -26,6 +27,11 @@ tabuleiroInicial = [
     [-1, -1, 1, 1, 1, -1, -1],
     [-1, -1, 1, 1, 1, -1, -1],
 ]
+
+class ServidorNomes:
+    def iniciar_servidor_nomes(self):
+        t_servidor_nomes = threading.Thread(target=Pyro4.naming.startNSloop, daemon=True)
+        t_servidor_nomes.start()
 
 pygame.display.set_icon(programIcon)
 
@@ -142,21 +148,25 @@ def draw_text(tela, text, font, text_col, x, y):
 class Cliente:
     def __init__(self):
         self.conectado = False
-        self.connection = None
         self.error = False
         self.encerrar = None
         self.textos = []
-        self.jogo
+        self.jogo = None
 
-    def run(self, ip, porta):
+    def run(self, proxy):
         try:
-            self.jogo = Pyro4.Proxy("PYRONAME:nome-server")
-            # while(True):
-            #     X = input("Digite a posicao X: ").strip()
-            #     Y = input("Digite a posicao Y: ").strip()
-            #     jogo.jogar(X,Y)
-            #     tabuleiro=jogo.pegar_tabuleiro()
-            #     print(tabuleiro)
+            self.jogo = Pyro4.Proxy("PYRONAME:"+proxy)
+            if self.jogo:
+                self.conectado=True
+                while(True):
+                    print(self.jogo.pegar_tabuleiro())
+                    X = input("Digite a posicao inicial X: ").strip()
+                    Y = input("Digite a posicao inicial Y: ").strip()
+                    X2 = input("Digite a posicao final X: ").strip()
+                    Y2 = input("Digite a posicao final Y: ").strip()
+                    self.jogo.moverPeca([X,Y],[X2,Y2])
+                    tabuleiro=self.jogo.pegar_tabuleiro()
+                    print(tabuleiro)
         except ConnectionRefusedError:
             print("A conexão foi recusada pelo servidor.")
             self.conectado = False
@@ -255,12 +265,10 @@ class Cliente:
 
     def encerrarConexao(self):
         self.encerrar = True
-        self.conectado = False
-        if self.connection:
-            try:
-                self.jogo.shutdown()
-            except Exception as e:
-                print(f"Erro ao encerrar conexão: {e}")
+        # try:
+        #     self.jogo.shutdown()
+        # except Exception as e:
+        #     print(f"Erro ao encerrar conexão: {e}")
 
 
 def coluna_clicada(pos):
@@ -431,7 +439,6 @@ def botoes_chat(offset):
 
 
 def loop_jogo(tipo):
-    global jogo
     sair = False
     offset = 0
     textField = TextInputBox(
@@ -569,8 +576,8 @@ def janela_jogo(selecao):
     global cliente
     cliente = Cliente()
 
-    def start_cliente(ip, porta):
-        t_cliente = threading.Thread(target=cliente.run, args=(ip, porta), daemon=True)
+    def start_cliente(proxy):
+        t_cliente = threading.Thread(target=cliente.run, args=(proxy,), daemon=True)
         t_cliente.start()
 
     def erro_conexao():
@@ -617,42 +624,24 @@ def janela_jogo(selecao):
 
     def entrar_jogo():
         encerrar = False
-        ip_input = TextInputBox(250, 480, 400, font, 14)
-        port_input = TextInputBox(770, 480, 200, font, 7)
-        group_ip = pygame.sprite.Group(ip_input)
-        group_port = pygame.sprite.Group(port_input)
+        proxy_input = TextInputBox(400, 480, 400, font, 14)
+        group_proxy = pygame.sprite.Group(proxy_input)
         while not encerrar:
             tela.fill(BRANCO)
             desenhar_background(tela, background)
             draw_text(
                 tela,
-                "Digite o endereço e porta do servidor",
+                "Digite o nome cadastrado do servidor",
                 font,
                 PRETO,
                 200,
                 380,
             )
-            draw_text(
-                tela,
-                "IP:",
-                font_parametro("calibri", 30),
-                PRETO,
-                200,
-                500,
-            )
-            draw_text(
-                tela,
-                "PORTA:",
-                font_parametro("calibri", 30),
-                PRETO,
-                670,
-                500,
-            )
             if botao_voltar.draw(tela):
                 cliente.encerrarConexao()
                 encerrar = True
             if botao_entrar.draw(tela):
-                start_cliente(ip_input.text, port_input.text)
+                start_cliente(proxy_input.text)
             if cliente.conectado == True:
                 encerrar = loop_jogo("cliente")
                 if encerrar == True:
@@ -663,24 +652,21 @@ def janela_jogo(selecao):
             for evento in event_list:
                 if evento.type == pygame.QUIT:
                     encerrar = True
-            group_ip.update(event_list)
-            group_port.update(event_list)
-            group_ip.draw(tela)
-            group_port.draw(tela)
+            group_proxy.update(event_list)
+            group_proxy.draw(tela)
             # Atualização da tela
             pygame.display.update()
-
-    def hostear_jogo():
+    
+    def servidor_de_nomes():
         encerrar = False
-        hostname = socket.gethostname()
-        ip = socket.gethostbyname(hostname)
+        SN = ServidorNomes()
+        SN.iniciar_servidor_nomes()
         while not encerrar:
             tela.fill(BRANCO)
             desenhar_background(tela, background)
-            texto = "Aguarde os jogadores se conectarem..."
             draw_text(
                 tela,
-                texto,
+                "Servidor de nomes iniciado",
                 font,
                 PRETO,
                 260,
@@ -688,21 +674,16 @@ def janela_jogo(selecao):
             )
             if botao_voltar.draw(tela):
                 encerrar = True
-                jogo.encerrar()
-            if jogo.pegar_estado_atual == 'Jogando':
-                texto = "Partida Iniciada"
 
             # Atualização da tela
             pygame.display.update()
             for evento in pygame.event.get():
                 if evento.type == pygame.QUIT:
                     encerrar = True
-                    jogo.encerrar()
 
     if selecao == "servidor":
-        hostear_jogo()
+        servidor_de_nomes()
     if selecao == "cliente":
         entrar_jogo()
-
 
 gerar_menu()
