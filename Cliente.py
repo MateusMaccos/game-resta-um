@@ -4,6 +4,7 @@ import Pyro4.naming
 import pygame
 import socket
 import threading
+import Server
 
 # Resolução
 LARGURA = 1200
@@ -18,6 +19,19 @@ fontFina = pygame.font.SysFont("calibri", 40)
 font_maior = pygame.font.SysFont("arialblack", 60)
 background = pygame.image.load("images/menu.jpg")
 programIcon = pygame.image.load("images/icone.png")
+
+class ErrorDetect:
+    def __init__(self):
+        self.nome = None
+
+    def setar_erro(self,erro):
+        self.nome = erro
+
+    def limpar_erro(self):
+        self.nome = None
+
+    def pegar_erro(self):
+        return self.nome
 
 class ServidorNomes:
     def iniciar_servidor_nomes(self):
@@ -140,7 +154,6 @@ class Cliente:
     def __init__(self):
         self.id=None
         self.conectado = False
-        self.error = False
         self.jogo = None
         self.posicaoInicial=None
         self.posicaoFinal=None
@@ -161,11 +174,11 @@ class Cliente:
         except ConnectionRefusedError:
             print("A conexão foi recusada pelo servidor.")
             self.conectado = False
-            self.error = "A conexão foi recusada pelo servidor."
+            erro.setar_erro("A conexão foi recusada pelo servidor.")
         except Exception as e:
             print(f"Erro ao conectar: {e}")
             self.conectado = False
-            self.error = "Não foi possível acessar a sala indicada"
+            erro.setar_erro("Não foi possível acessar a sala indicada")
 
     def estado_atual(self):
         return self.jogo.pegar_estado_atual()
@@ -545,6 +558,8 @@ def gerar_menu():
     # variaveis
     finish = False
 
+    sn_img = pygame.image.load("images/botao_servidor_nomes.jpg")
+
     servidor_img = pygame.image.load("images/botao_servidor.jpg")
 
     cliente_img = pygame.image.load("images/botao_cliente.jpg")
@@ -552,6 +567,7 @@ def gerar_menu():
     sair_img = pygame.image.load("images/botao_sair.jpg")
     tutorial_img = pygame.image.load("images/botao_tutorial.jpg")
 
+    botao_sn = Button(490, 230, sn_img, 1)
     botao_servidor = Button(490, 340, servidor_img, 1)
     botao_cliente = Button(490, 450, cliente_img, 1)
     botao_tutorial = Button(490, 560, tutorial_img, 1)
@@ -564,6 +580,10 @@ def gerar_menu():
         desenhar_background(telaMenu, background)
 
         if not finish:
+            if botao_sn.draw(telaMenu):
+                finish = janela_jogo('sn')
+                if finish:
+                    break
             if botao_servidor.draw(telaMenu):
                 finish = janela_jogo('servidor')
                 if finish:
@@ -607,11 +627,19 @@ def janela_jogo(selecao):
     global cliente
     cliente = Cliente()
 
+    global erro
+    erro = ErrorDetect()
+
     def start_cliente(proxy):
         t_cliente = threading.Thread(target=cliente.run, args=(proxy,), daemon=True)
         t_cliente.start()
 
-    def erro_conexao():
+
+    def iniciar_servidor(nome):
+        t_sv = threading.Thread(target=Server.iniciar, args=(nome,), daemon=True)
+        t_sv.start()
+
+    def tela_de_error():
         sair = False
         while not sair:
             for evento in pygame.event.get():
@@ -621,21 +649,21 @@ def janela_jogo(selecao):
                 if evento.type == pygame.KEYDOWN:
                     if evento.key == pygame.K_SPACE:
                         sair = True
-                        cliente.error = None
+                        erro.limpar_erro()
 
             display.fill(BRANCO)
             desenhar_background(display, background)
             draw_text(
                 display,
-                "Erro ao conectar!",
+                "Erro!",
                 font,
                 PRETO,
-                400,
+                550,
                 300,
             )
             draw_text(
                 display,
-                str(cliente.error),
+                str(erro.pegar_erro()),
                 font,
                 COR_TABULEIRO,
                 180,
@@ -676,8 +704,8 @@ def janela_jogo(selecao):
                 encerrar = loop_jogo()
                 if encerrar == True:
                     break
-            if cliente.error:
-                encerrar = erro_conexao()
+            if erro.pegar_erro():
+                encerrar = tela_de_error()
             event_list = pygame.event.get()
             for evento in event_list:
                 if evento.type == pygame.QUIT:
@@ -710,9 +738,77 @@ def janela_jogo(selecao):
             for evento in pygame.event.get():
                 if evento.type == pygame.QUIT:
                     encerrar = True
+    def hostear_jogo():
+        encerrar = False
+        proxy_input = TextInputBox(400, 480, 400, font, 14)
+        group_proxy = pygame.sprite.Group(proxy_input)
+        while not encerrar:
+            tela.fill(BRANCO)
+            desenhar_background(tela, background)
+            draw_text(
+                tela,
+                "Digite o nome do servidor a ser cadastrado",
+                font,
+                PRETO,
+                160,
+                380,
+            )
+            if botao_voltar.draw(tela):
+                encerrar = True
+            if botao_entrar.draw(tela):
+                jogo_hosteado(proxy_input.text)
+            if erro.pegar_erro():
+                encerrar=tela_de_error()
+            event_list = pygame.event.get()
+            for evento in event_list:
+                if evento.type == pygame.QUIT:
+                    encerrar = True
+            group_proxy.update(event_list)
+            group_proxy.draw(tela)
+            # Atualização da tela
+            pygame.display.update()
+    def jogo_hosteado(nome):
+        encerrar = False
+        try:
+            Pyro4.locateNS() 
+        except Exception as e:
+            encerrar = True
+            erro.setar_erro('Erro em localizar o servidor de nomes')
+        iniciar_servidor(nome)
+        while not encerrar:
+            tela.fill(BRANCO)
+            desenhar_background(tela, background)
+            draw_text(
+                tela,
+                f"Servidor iniciado com o nome:",
+                font,
+                PRETO,
+                260,
+                380,
+            )
+            draw_text(
+                tela,
+                nome,
+                font,
+                COR_TABULEIRO,
+                260,
+                450,
+            )
+            if erro.pegar_erro():
+                encerrar=tela_de_error()
+            if botao_voltar.draw(tela):
+                encerrar = True
 
-    if selecao == "servidor":
+            # Atualização da tela
+            pygame.display.update()
+            for evento in pygame.event.get():
+                if evento.type == pygame.QUIT:
+                    encerrar = True 
+
+    if selecao == "sn":
         servidor_de_nomes()
+    if selecao == "servidor":
+        hostear_jogo()
     if selecao == "cliente":
         entrar_jogo()
 
